@@ -178,39 +178,41 @@ class MainWindow(QMainWindow):
     def create_input_area(self) -> QGroupBox:
         """创建输入区域"""
         group = QGroupBox("批量基因组坐标输入")
-        self.add_shadow(group)
 
         layout = QFormLayout()
         layout.setLabelAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         layout.setFormAlignment(Qt.AlignLeft | Qt.AlignTop)
-        layout.setHorizontalSpacing(14)
-        layout.setVerticalSpacing(12)
+        layout.setHorizontalSpacing(16)
+        layout.setVerticalSpacing(16)
+        layout.setContentsMargins(20, 20, 20, 20)
 
         # 多行输入
         self.input_text = QPlainTextEdit()
         self.input_text.setPlaceholderText(
-            "请输入染色体坐标信息，每行一组\n\n"
-            "格式示例：\n"
-            "chr1 123456  (染色体号 + 空格 + 位点)\n"
+            "请输入染色体坐标信息，每行一组。格式：chr1 123456 (染色体号 + 空格 + 位点)\n"
+            "支持 1-22 号染色体及 X、Y 染色体。可粘贴多行数据批量处理。\n\n"
+            "示例：\n"
+            "chr1 123456\n"
             "chr2 234567\n"
-            "X 345678\n\n"
-            "支持 1-22 号染色体及 X、Y 染色体\n"
-            "提示：可以粘贴多行数据，程序会自动批量处理"
+            "X 345678"
         )
-        self.input_text.setMaximumHeight(150)
+        self.input_text.setMinimumHeight(120)
+        self.input_text.setMaximumHeight(180)
         self.input_text.setLineWrapMode(QPlainTextEdit.NoWrap)
         layout.addRow("坐标内容:", self.input_text)
         
         # 基因组版本
         self.version_combo = QComboBox()
         self.version_combo.addItems(["hg38/GRCh38", "hg19/GRCh37"])
-        self.version_combo.setMinimumWidth(160)
+        self.version_combo.setMinimumWidth(180)
+        self.version_combo.setMinimumHeight(28)
         layout.addRow("基因组版本:", self.version_combo)
 
         # 浏览器选择
         self.browser_combo = QComboBox()
         self.browser_combo.addItems(["Edge", "Chrome"])
-        self.browser_combo.setMinimumWidth(160)
+        self.browser_combo.setMinimumWidth(180)
+        self.browser_combo.setMinimumHeight(28)
         layout.addRow("浏览器:", self.browser_combo)
         
         group.setLayout(layout)
@@ -224,164 +226,141 @@ class MainWindow(QMainWindow):
         # 创建参数内容容器
         param_content = QWidget()
         layout = QVBoxLayout()
-        layout.setSpacing(12)
-        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(18)
+        layout.setContentsMargins(20, 20, 20, 20)
         
         # PCR产物大小
         pcr_layout = QHBoxLayout()
-        pcr_layout.addWidget(QLabel("PCR产物大小 (bp):"))
+        pcr_layout.setSpacing(10)
+        label = QLabel("PCR产物大小 (bp):")
+        label.setMinimumWidth(140)
+        pcr_layout.addWidget(label)
         self.pcr_min_input = QLineEdit("100")
-        self.pcr_min_input.setMaximumWidth(80)
+        self.pcr_min_input.setMaximumWidth(90)
+        self.pcr_min_input.setMinimumHeight(28)
         pcr_layout.addWidget(self.pcr_min_input)
-        pcr_layout.addWidget(QLabel(" - "))
+        pcr_layout.addWidget(QLabel("-"))
         self.pcr_max_input = QLineEdit("1200")
-        self.pcr_max_input.setMaximumWidth(80)
+        self.pcr_max_input.setMaximumWidth(90)
+        self.pcr_max_input.setMinimumHeight(28)
         pcr_layout.addWidget(self.pcr_max_input)
         pcr_layout.addStretch()
         layout.addLayout(pcr_layout)
         
         # Tm值
         tm_layout = QHBoxLayout()
-        tm_layout.addWidget(QLabel("Tm值 (°C):"))
+        tm_layout.setSpacing(10)
+        label = QLabel("Tm值 (°C):")
+        label.setMinimumWidth(140)
+        tm_layout.addWidget(label)
         self.tm_min_input = QLineEdit("58")
         self.tm_min_input.setPlaceholderText("最小")
-        self.tm_min_input.setMaximumWidth(60)
+        self.tm_min_input.setMaximumWidth(70)
+        self.tm_min_input.setMinimumHeight(28)
         tm_layout.addWidget(self.tm_min_input)
         
         self.tm_opt_input = QLineEdit("60")
         self.tm_opt_input.setPlaceholderText("最佳")
-        self.tm_opt_input.setMaximumWidth(60)
+        self.tm_opt_input.setMaximumWidth(70)
+        self.tm_opt_input.setMinimumHeight(28)
         tm_layout.addWidget(self.tm_opt_input)
         
         self.tm_max_input = QLineEdit("62")
         self.tm_max_input.setPlaceholderText("最大")
-        self.tm_max_input.setMaximumWidth(60)
+        self.tm_max_input.setMaximumWidth(70)
+        self.tm_max_input.setMinimumHeight(28)
         tm_layout.addWidget(self.tm_max_input)
         
-        tm_layout.addWidget(QLabel("   最大差值:"))
+        tm_layout.addWidget(QLabel("最大差值:"))
         self.tm_diff_input = QLineEdit("2")
-        self.tm_diff_input.setMaximumWidth(60)
+        self.tm_diff_input.setMaximumWidth(70)
+        self.tm_diff_input.setMinimumHeight(28)
         tm_layout.addWidget(self.tm_diff_input)
         tm_layout.addStretch()
         layout.addLayout(tm_layout)
         
         # 引物大小
         primer_layout = QHBoxLayout()
-        primer_layout.addWidget(QLabel("引物大小 (bp):"))
+        primer_layout.setSpacing(10)
+        label = QLabel("引物大小 (bp):")
+        label.setMinimumWidth(140)
+        primer_layout.addWidget(label)
         self.primer_min_input = QLineEdit("18")
         self.primer_min_input.setPlaceholderText("最小")
-        self.primer_min_input.setMaximumWidth(60)
+        self.primer_min_input.setMaximumWidth(70)
+        self.primer_min_input.setMinimumHeight(28)
         primer_layout.addWidget(self.primer_min_input)
         
         self.primer_opt_input = QLineEdit("20")
         self.primer_opt_input.setPlaceholderText("最佳")
-        self.primer_opt_input.setMaximumWidth(60)
+        self.primer_opt_input.setMaximumWidth(70)
+        self.primer_opt_input.setMinimumHeight(28)
         primer_layout.addWidget(self.primer_opt_input)
         
         self.primer_max_input = QLineEdit("25")
         self.primer_max_input.setPlaceholderText("最大")
-        self.primer_max_input.setMaximumWidth(60)
+        self.primer_max_input.setMaximumWidth(70)
+        self.primer_max_input.setMinimumHeight(28)
         primer_layout.addWidget(self.primer_max_input)
         primer_layout.addStretch()
         layout.addLayout(primer_layout)
         
         # 其他参数
         other_layout = QFormLayout()
-        other_layout.setHorizontalSpacing(14)
-        other_layout.setVerticalSpacing(10)
+        other_layout.setHorizontalSpacing(16)
+        other_layout.setVerticalSpacing(14)
+        other_layout.setLabelAlignment(Qt.AlignLeft)
+        
         self.primer_num_input = QLineEdit("10")
-        self.primer_num_input.setMaximumWidth(100)
+        self.primer_num_input.setMaximumWidth(120)
+        self.primer_num_input.setMinimumHeight(28)
         other_layout.addRow("返回引物数:", self.primer_num_input)
         
         self.gc_max_input = QLineEdit("4")
-        self.gc_max_input.setMaximumWidth(100)
+        self.gc_max_input.setMaximumWidth(120)
+        self.gc_max_input.setMinimumHeight(28)
         other_layout.addRow("3'端最大GC:", self.gc_max_input)
         
         self.poly_max_input = QLineEdit("4")
-        self.poly_max_input.setMaximumWidth(100)
+        self.poly_max_input.setMaximumWidth(120)
+        self.poly_max_input.setMinimumHeight(28)
         other_layout.addRow("最大连续碱基:", self.poly_max_input)
         
         self.ext_left_input = QLineEdit("800")
-        self.ext_left_input.setMaximumWidth(100)
+        self.ext_left_input.setMaximumWidth(120)
+        self.ext_left_input.setMinimumHeight(28)
         other_layout.addRow("左侧扩展 (bp):", self.ext_left_input)
         
         self.ext_right_input = QLineEdit("800")
-        self.ext_right_input.setMaximumWidth(100)
+        self.ext_right_input.setMaximumWidth(120)
+        self.ext_right_input.setMinimumHeight(28)
         other_layout.addRow("右侧扩展 (bp):", self.ext_right_input)
         
         layout.addLayout(other_layout)
         
         # 参数管理按钮
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(8)
+        button_layout.setSpacing(12)
         
-        reset_btn = QPushButton("🔄 重置为默认")
-        reset_btn.setMaximumWidth(120)
+        reset_btn = QPushButton("重置为默认")
+        reset_btn.setMinimumWidth(100)
+        reset_btn.setMinimumHeight(32)
         reset_btn.clicked.connect(self.reset_to_default_params)
-        reset_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f0f2f5;
-                color: #4f5d6d;
-                font-size: 11px;
-                border-radius: 4px;
-                padding: 4px 8px;
-                border: 1px solid #d0d7de;
-            }
-            QPushButton:hover {
-                background-color: #e7eaef;
-            }
-        """)
         
-        save_btn = QPushButton("💾 保存模板")
-        save_btn.setMaximumWidth(120)
+        save_btn = QPushButton("保存模板")
+        save_btn.setMinimumWidth(100)
+        save_btn.setMinimumHeight(32)
         save_btn.clicked.connect(self.save_template)
-        save_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f0f2f5;
-                color: #4f5d6d;
-                font-size: 11px;
-                border-radius: 4px;
-                padding: 4px 8px;
-                border: 1px solid #d0d7de;
-            }
-            QPushButton:hover {
-                background-color: #e7eaef;
-            }
-        """)
         
-        load_btn = QPushButton("📂 加载模板")
-        load_btn.setMaximumWidth(120)
+        load_btn = QPushButton("加载模板")
+        load_btn.setMinimumWidth(100)
+        load_btn.setMinimumHeight(32)
         load_btn.clicked.connect(self.load_template)
-        load_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f0f2f5;
-                color: #4f5d6d;
-                font-size: 11px;
-                border-radius: 4px;
-                padding: 4px 8px;
-                border: 1px solid #d0d7de;
-            }
-            QPushButton:hover {
-                background-color: #e7eaef;
-            }
-        """)
         
-        manage_btn = QPushButton("⚙️ 管理模板")
-        manage_btn.setMaximumWidth(120)
+        manage_btn = QPushButton("管理模板")
+        manage_btn.setMinimumWidth(100)
+        manage_btn.setMinimumHeight(32)
         manage_btn.clicked.connect(self.manage_templates)
-        manage_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f0f2f5;
-                color: #4f5d6d;
-                font-size: 11px;
-                border-radius: 4px;
-                padding: 4px 8px;
-                border: 1px solid #d0d7de;
-            }
-            QPushButton:hover {
-                background-color: #e7eaef;
-            }
-        """)
         
         button_layout.addWidget(reset_btn)
         button_layout.addWidget(save_btn)
@@ -404,11 +383,10 @@ class MainWindow(QMainWindow):
     def create_progress_area(self) -> QGroupBox:
         """创建进度显示区域"""
         group = QGroupBox("运行进度")
-        self.add_shadow(group)
 
         layout = QVBoxLayout()
-        layout.setSpacing(12)
-        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(14)
+        layout.setContentsMargins(20, 20, 20, 20)
 
         # 进度条
         self.progress_bar = QProgressBar()
@@ -450,59 +428,17 @@ class MainWindow(QMainWindow):
         
         # 开始按钮
         self.start_button = QPushButton("开始设计引物")
+        self.start_button.setObjectName("start_button")
         self.start_button.setMinimumHeight(40)
-        self.start_button.setStyleSheet("""
-            QPushButton {
-                background-color: #2f6fed;
-                color: #ffffff;
-                font-size: 14px;
-                font-weight: 600;
-                border-radius: 6px;
-                padding: 6px 18px;
-                border: 1px solid #2559c2;
-            }
-            QPushButton:hover {
-                background-color: #2559c2;
-                border: 1px solid #1f4aa3;
-            }
-            QPushButton:pressed {
-                background-color: #1f4aa3;
-            }
-            QPushButton:disabled {
-                background-color: #d6dce5;
-                color: #8b95a3;
-                border: 1px solid #c7ced8;
-            }
-        """)
+        self.start_button.setMinimumWidth(140)
         self.start_button.clicked.connect(self.start_processing)
         
         # 停止按钮
         self.stop_button = QPushButton("停止处理")
+        self.stop_button.setObjectName("stop_button")
         self.stop_button.setMinimumHeight(40)
+        self.stop_button.setMinimumWidth(140)
         self.stop_button.setEnabled(False)
-        self.stop_button.setStyleSheet("""
-            QPushButton {
-                background-color: #c53f32;
-                color: #ffffff;
-                font-size: 14px;
-                font-weight: 600;
-                border-radius: 6px;
-                padding: 6px 18px;
-                border: 1px solid #a4362b;
-            }
-            QPushButton:hover {
-                background-color: #a4362b;
-                border: 1px solid #8c2f26;
-            }
-            QPushButton:pressed {
-                background-color: #8c2f26;
-            }
-            QPushButton:disabled {
-                background-color: #d6dce5;
-                color: #8b95a3;
-                border: 1px solid #c7ced8;
-            }
-        """)
         self.stop_button.clicked.connect(self.stop_processing)
         
         layout.addWidget(self.start_button)
@@ -510,105 +446,179 @@ class MainWindow(QMainWindow):
         
         return layout
     
-    def add_shadow(self, widget):
-        """添加阴影效果"""
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(14)
-        shadow.setOffset(0, 3)
-        shadow.setColor(QColor(32, 45, 64, 40))
-        widget.setGraphicsEffect(shadow)
-    
     def apply_styles(self):
-        """应用全局样式"""
+        """应用全局样式 - 简洁工业风"""
         self.setStyleSheet("""
+            /* 主窗口背景 */
             QMainWindow {
-                background-color: #f4f5f7;
+                background-color: #f0f0f0;
             }
+            
+            /* 全局字体和颜色 */
             QWidget {
-                font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-                color: #1f2933;
+                font-family: 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
+                font-size: 9pt;
+                color: #000000;
             }
+            
+            /* 菜单栏 */
             QMenuBar {
-                background-color: #f8f9fb;
-                border-bottom: 1px solid #d1d7e0;
+                background-color: #ffffff;
+                border-bottom: 1px solid #d0d0d0;
+                padding: 2px;
             }
             QMenuBar::item {
-                spacing: 6px;
                 padding: 4px 12px;
                 background: transparent;
             }
             QMenuBar::item:selected {
-                background: #e4e8ef;
+                background-color: #e5f3ff;
             }
             QMenu {
                 background-color: #ffffff;
-                border: 1px solid #d1d7e0;
+                border: 1px solid #acacac;
+            }
+            QMenu::item {
+                padding: 5px 25px 5px 20px;
             }
             QMenu::item:selected {
-                background-color: #e4e8ef;
+                background-color: #e5f3ff;
             }
+            
+            /* 分组框 */
             QGroupBox {
-                font-size: 13px;
-                font-weight: 600;
-                border: 1px solid #d1d7e0;
-                border-radius: 10px;
-                margin-top: 12px;
-                padding-top: 18px;
                 background-color: #ffffff;
+                border: 1px solid #d0d0d0;
+                border-radius: 0px;
+                margin-top: 8px;
+                padding-top: 8px;
+                font-weight: normal;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
-                left: 16px;
-                padding: 0 6px;
-                color: #4b5563;
+                subcontrol-position: top left;
+                padding: 2px 6px;
+                color: #000000;
             }
-            QLabel {
-                font-size: 12px;
-                color: #3f4c5d;
+            
+            /* 输入框 */
+            QLineEdit, QPlainTextEdit {
+                background-color: #ffffff;
+                border: 1px solid #acacac;
+                border-radius: 0px;
+                padding: 4px 6px;
+                selection-background-color: #0078d7;
+                selection-color: #ffffff;
             }
-            QLineEdit, QComboBox, QPlainTextEdit {
-                border: 1px solid #c3cad4;
-                border-radius: 6px;
-                padding: 6px;
-                background-color: #f9fafb;
-                color: #1f2933;
-                selection-background-color: #b9cdf0;
-                selection-color: #0f172a;
+            QLineEdit:focus, QPlainTextEdit:focus {
+                border: 1px solid #0078d7;
+            }
+            QLineEdit:disabled, QPlainTextEdit:disabled {
+                background-color: #f0f0f0;
+                color: #6d6d6d;
+            }
+            
+            /* 下拉框 */
+            QComboBox {
+                background-color: #ffffff;
+                border: 1px solid #acacac;
+                border-radius: 0px;
+                padding: 4px 6px;
+            }
+            QComboBox:hover {
+                border: 1px solid #0078d7;
+            }
+            QComboBox:focus {
+                border: 1px solid #0078d7;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid #606060;
+                margin-right: 5px;
             }
             QComboBox QAbstractItemView {
                 background-color: #ffffff;
-                border: 1px solid #c3cad4;
-                selection-background-color: #e4e8ef;
+                border: 1px solid #acacac;
+                selection-background-color: #e5f3ff;
+                selection-color: #000000;
             }
-            QLineEdit:focus, QPlainTextEdit:focus {
-                border: 1px solid #365f9c;
+            
+            /* 按钮 */
+            QPushButton {
+                background-color: #e1e1e1;
+                border: 1px solid #adadad;
+                border-radius: 0px;
+                padding: 6px 16px;
+                color: #000000;
             }
+            QPushButton:hover {
+                background-color: #e5f3ff;
+                border: 1px solid #0078d7;
+            }
+            QPushButton:pressed {
+                background-color: #cce8ff;
+                border: 1px solid #005499;
+            }
+            QPushButton:disabled {
+                background-color: #f0f0f0;
+                border: 1px solid #d0d0d0;
+                color: #6d6d6d;
+            }
+            
+            /* 主按钮(开始按钮) */
+            QPushButton#start_button {
+                background-color: #0078d7;
+                border: 1px solid #005a9e;
+                color: #ffffff;
+                font-weight: bold;
+            }
+            QPushButton#start_button:hover {
+                background-color: #005a9e;
+            }
+            QPushButton#start_button:pressed {
+                background-color: #004578;
+            }
+            QPushButton#start_button:disabled {
+                background-color: #cccccc;
+                border: 1px solid #acacac;
+                color: #6d6d6d;
+            }
+            
+            /* 危险按钮(停止按钮) */
+            QPushButton#stop_button {
+                background-color: #e81123;
+                border: 1px solid #c50f1f;
+                color: #ffffff;
+                font-weight: bold;
+            }
+            QPushButton#stop_button:hover {
+                background-color: #c50f1f;
+            }
+            QPushButton#stop_button:pressed {
+                background-color: #a80d1a;
+            }
+            QPushButton#stop_button:disabled {
+                background-color: #cccccc;
+                border: 1px solid #acacac;
+                color: #6d6d6d;
+            }
+            
+            /* 进度条 */
             QProgressBar {
-                background-color: #edf0f4;
-                border: 1px solid #d1d7e0;
-                border-radius: 6px;
-                color: #1f2933;
+                background-color: #ffffff;
+                border: 1px solid #acacac;
+                border-radius: 0px;
                 text-align: center;
+                height: 20px;
             }
             QProgressBar::chunk {
-                background-color: #365f9c;
-                border-radius: 6px;
-            }
-            QScrollBar:vertical {
-                background: #e6e9ee;
-                width: 12px;
-                margin: 0px;
-            }
-            QScrollBar::handle:vertical {
-                background: #c4cad3;
-                min-height: 20px;
-                border-radius: 6px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background: #aab2be;
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                height: 0px;
+                background-color: #0078d7;
             }
         """)
     

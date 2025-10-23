@@ -38,16 +38,16 @@ class CollapsibleBox(QWidget):
         self.title_label = QLabel(title)
         self.title_label.setStyleSheet("""
             QLabel {
-                font-size: 13px;
-                font-weight: 600;
-                color: #6b7785;
+                font-size: 9pt;
+                font-weight: normal;
+                color: #000000;
                 padding-left: 5px;
             }
         """)
         
         # 标题栏布局
         header_layout = QHBoxLayout()
-        header_layout.setContentsMargins(10, 8, 10, 8)
+        header_layout.setContentsMargins(8, 6, 8, 6)
         header_layout.addWidget(self.toggle_button)
         header_layout.addWidget(self.title_label)
         header_layout.addStretch()
@@ -57,38 +57,37 @@ class CollapsibleBox(QWidget):
         self.header_widget.setLayout(header_layout)
         self.header_widget.setStyleSheet("""
             QFrame {
-                background-color: #f8f9fb;
-                border: 1px solid #dce4f0;
-                border-radius: 8px;
+                background-color: #ffffff;
+                border: 1px solid #d0d0d0;
+                border-radius: 0px;
             }
             QPushButton {
                 background-color: transparent;
                 border: none;
-                font-size: 16px;
+                font-size: 14px;
                 padding: 0;
-                min-width: 20px;
-                min-height: 20px;
-                max-width: 20px;
-                max-height: 20px;
+                min-width: 18px;
+                min-height: 18px;
+                max-width: 18px;
+                max-height: 18px;
             }
             QPushButton:hover {
-                background-color: rgba(76, 154, 255, 0.1);
-                border-radius: 4px;
+                background-color: #e5f3ff;
+                border-radius: 0px;
             }
         """)
         
         # 内容容器
         self.content_widget = QFrame()
         self.content_layout = QVBoxLayout(self.content_widget)
-        self.content_layout.setContentsMargins(15, 10, 15, 10)
-        self.content_layout.setSpacing(10)
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_layout.setSpacing(0)
         self.content_widget.setStyleSheet("""
             QFrame {
                 background-color: #ffffff;
-                border: 1px solid #dce4f0;
+                border: 1px solid #d0d0d0;
                 border-top: none;
-                border-bottom-left-radius: 8px;
-                border-bottom-right-radius: 8px;
+                border-radius: 0px;
             }
         """)
         
@@ -143,9 +142,9 @@ class CollapsibleBox(QWidget):
     def update_toggle_icon(self):
         """更新折叠按钮图标"""
         if self.is_collapsed:
-            self.toggle_button.setText("▶")
+            self.toggle_button.setText("▷")
         else:
-            self.toggle_button.setText("▼")
+            self.toggle_button.setText("▽")
     
     def set_collapsed(self, collapsed: bool):
         """设置折叠状态"""
