@@ -1,0 +1,10 @@
+# 坐标转换文件目录
+
+请将 UCSC LiftOver chain 文件放置在此目录：
+- hg19ToHg38.over.chain
+
+## 下载地址
+https://hgdownload.cse.ucsc.edu/goldenpath/hg19/liftOver/
+
+## 说明
+该文件用于将 hg19 基因组坐标转换为 hg38 坐标。

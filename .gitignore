@@ -49,6 +49,9 @@ primer_design_blast/resources/hg19ToHg38/*.chain
 # 应用图标（二进制文件）
 primer_design_blast/resources/*.ico
 
+# 保留 .gitkeep 文件
+!**/.gitkeep
+
 # 不需要的文件夹
 历史版本/
 离线引物设计/
