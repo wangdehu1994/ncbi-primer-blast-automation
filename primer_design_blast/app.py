@@ -14,16 +14,16 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 
-from primer_design_suite.views.main_window import MainWindow
-from primer_design_suite.utils.logger import setup_logger
-from primer_design_suite.utils.resource_utils import get_resource_path
-from primer_design_suite.models.config import AppConfig
+from .views.main_window import MainWindow
+from .utils.logger import setup_logger
+from .utils.resource_utils import get_resource_path
+from .models.config import AppConfig
 
 
 def main():
     """主函数"""
     # 设置日志
-    logger = setup_logger("primer_design_suite", logging.INFO)
+    logger = setup_logger("primer_design_blast", logging.INFO)
     logger.info("=" * 60)
     logger.info("引物设计套件启动")
     logger.info("=" * 60)

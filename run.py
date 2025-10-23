@@ -13,7 +13,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 # 导入并运行主程序
-from primer_design_suite.app import main
+from primer_design_blast.app import main
 
 if __name__ == "__main__":
     main()
