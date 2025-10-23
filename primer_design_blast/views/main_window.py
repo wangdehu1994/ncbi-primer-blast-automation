@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (
     QInputDialog, QDialog, QDialogButtonBox, QTextEdit, QGraphicsDropShadowEffect
 )
 from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, pyqtSlot, QThread, pyqtSignal
-from PyQt5.QtGui import QIcon, QFont
+from PyQt5.QtGui import QIcon, QFont, QColor
 
 from ..models.primer_params import PrimerParams
 from ..models.config import AppConfig, TemplateManager
@@ -319,7 +319,7 @@ class MainWindow(QMainWindow):
         # 统计信息标签
         stats_layout = QHBoxLayout()
         self.stats_label = QLabel("就绪")
-        self.stats_label.setStyleSheet("color: #666; font-weight: bold;")
+        self.stats_label.setStyleSheet("color: #6b7785; font-weight: 600;")
         stats_layout.addWidget(self.stats_label)
         stats_layout.addStretch()
         layout.addLayout(stats_layout)
@@ -331,10 +331,10 @@ class MainWindow(QMainWindow):
         self.progress_display.setStyleSheet("""
             QPlainTextEdit {
                 font-family: 'Consolas', 'Monaco', monospace;
-                font-size: 10px;
-                background-color: #2b2b2b;
-                color: #d4d4d4;
-                border: 1px solid #555;
+                font-size: 11px;
+                background-color: #f7f9fc;
+                color: #324055;
+                border: 1px solid #d7dde5;
             }
         """)
         layout.addWidget(self.progress_display)
@@ -352,17 +352,25 @@ class MainWindow(QMainWindow):
         self.start_button.setMinimumHeight(40)
         self.start_button.setStyleSheet("""
             QPushButton {
-                background-color: #27ae60;
-                color: white;
+                background-color: #4c9aff;
+                color: #ffffff;
                 font-size: 14px;
-                font-weight: bold;
+                font-weight: 600;
                 border-radius: 6px;
+                padding: 6px 18px;
+                border: 1px solid #3d86e0;
             }
             QPushButton:hover {
-                background-color: #229954;
+                background-color: #3d86e0;
+                border: 1px solid #3576c4;
+            }
+            QPushButton:pressed {
+                background-color: #346fb0;
             }
             QPushButton:disabled {
-                background-color: #95a5a6;
+                background-color: #d5dde7;
+                color: #8a96a5;
+                border: 1px solid #c5ced9;
             }
         """)
         self.start_button.clicked.connect(self.start_processing)
@@ -373,17 +381,25 @@ class MainWindow(QMainWindow):
         self.stop_button.setEnabled(False)
         self.stop_button.setStyleSheet("""
             QPushButton {
-                background-color: #e74c3c;
-                color: white;
+                background-color: #ff7875;
+                color: #ffffff;
                 font-size: 14px;
-                font-weight: bold;
+                font-weight: 600;
                 border-radius: 6px;
+                padding: 6px 18px;
+                border: 1px solid #e06764;
             }
             QPushButton:hover {
-                background-color: #c0392b;
+                background-color: #e06764;
+                border: 1px solid #c25754;
+            }
+            QPushButton:pressed {
+                background-color: #ba4f4d;
             }
             QPushButton:disabled {
-                background-color: #95a5a6;
+                background-color: #d5dde7;
+                color: #8a96a5;
+                border: 1px solid #c5ced9;
             }
         """)
         self.stop_button.clicked.connect(self.stop_processing)
@@ -396,44 +412,102 @@ class MainWindow(QMainWindow):
     def add_shadow(self, widget):
         """添加阴影效果"""
         shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(15)
-        shadow.setOffset(0, 2)
-        shadow.setColor(Qt.gray)
+        shadow.setBlurRadius(18)
+        shadow.setOffset(0, 4)
+        shadow.setColor(QColor(30, 64, 100, 60))
         widget.setGraphicsEffect(shadow)
     
     def apply_styles(self):
         """应用全局样式"""
         self.setStyleSheet("""
             QMainWindow {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #f6f9ff, stop:1 #eef2ff);
+                background-color: #f3f6fb;
+            }
+            QWidget {
+                font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                color: #2f3d4c;
+            }
+            QMenuBar {
+                background-color: #ffffff;
+                border-bottom: 1px solid #d7dde5;
+            }
+            QMenuBar::item {
+                spacing: 6px;
+                padding: 4px 12px;
+                background: transparent;
+            }
+            QMenuBar::item:selected {
+                background: #e7efff;
+            }
+            QMenu {
+                background-color: #ffffff;
+                border: 1px solid #d7dde5;
+            }
+            QMenu::item:selected {
+                background-color: #e7efff;
             }
             QGroupBox {
                 font-size: 13px;
-                font-weight: bold;
-                border: 2px solid #dcdcdc;
+                font-weight: 600;
+                border: 1px solid #dce4f0;
                 border-radius: 8px;
                 margin-top: 12px;
-                padding-top: 15px;
-                background-color: white;
+                padding-top: 18px;
+                background-color: #ffffff;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
-                left: 12px;
-                padding: 0 8px;
+                left: 14px;
+                padding: 0 6px;
+                color: #6b7785;
             }
             QLabel {
-                font-size: 11px;
-                color: #333;
+                font-size: 12px;
+                color: #4f5d6d;
             }
             QLineEdit, QComboBox, QPlainTextEdit {
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                padding: 5px;
-                background-color: white;
+                border: 1px solid #c9d4e5;
+                border-radius: 6px;
+                padding: 6px;
+                background-color: #fdfefe;
+                color: #2f3d4c;
+                selection-background-color: #b7d4ff;
+                selection-color: #1a2840;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #ffffff;
+                border: 1px solid #c9d4e5;
+                selection-background-color: #e7efff;
             }
             QLineEdit:focus, QPlainTextEdit:focus {
-                border: 2px solid #3498db;
+                border: 1px solid #4c9aff;
+            }
+            QProgressBar {
+                background-color: #f7f9fc;
+                border: 1px solid #d7dde5;
+                border-radius: 6px;
+                color: #2f3d4c;
+                text-align: center;
+            }
+            QProgressBar::chunk {
+                background-color: #4c9aff;
+                border-radius: 6px;
+            }
+            QScrollBar:vertical {
+                background: #eef2f7;
+                width: 12px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #c9d4e5;
+                min-height: 20px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #b4c4da;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
             }
         """)
     
