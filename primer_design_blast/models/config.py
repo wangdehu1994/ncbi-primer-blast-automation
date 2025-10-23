@@ -17,8 +17,8 @@ class AppConfig:
     """应用配置类"""
     
     # 应用信息
-    APP_NAME: str = "引物设计套件"
-    APP_VERSION: str = "3.0.0"
+    APP_NAME: str = "引物设计工具"
+    APP_VERSION: str = "3.0"
     
     # 默认参数
     DEFAULT_GENOME_VERSION: str = "hg38/GRCh38"
@@ -115,6 +115,7 @@ class TemplateManager:
             templates_file = str(user_dir / 'templates.json')
         
         self.templates_file = templates_file
+        self.config_file = str(Path(templates_file).parent / 'config.json')
         self.logger = logging.getLogger(__name__)
     
     def load_templates(self) -> Dict[str, dict]:
@@ -128,6 +129,42 @@ class TemplateManager:
         except Exception as e:
             self.logger.error(f"加载模板失败: {e}")
             return {}
+    
+    def load_config(self) -> Dict[str, any]:
+        """加载配置"""
+        if not os.path.exists(self.config_file):
+            return {}
+        
+        try:
+            with open(self.config_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            self.logger.error(f"加载配置失败: {e}")
+            return {}
+    
+    def save_config(self, config: Dict[str, any]) -> bool:
+        """保存配置"""
+        try:
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            self.logger.error(f"保存配置失败: {e}")
+            return False
+    
+    def get_default_template(self) -> Optional[str]:
+        """获取默认模板名称"""
+        config = self.load_config()
+        return config.get('default_template', None)
+    
+    def set_default_template(self, name: Optional[str]) -> bool:
+        """设置默认模板"""
+        config = self.load_config()
+        if name is None:
+            config.pop('default_template', None)
+        else:
+            config['default_template'] = name
+        return self.save_config(config)
     
     def save_template(self, name: str, params: PrimerParams) -> bool:
         """
@@ -190,6 +227,10 @@ class TemplateManager:
                 
                 with open(self.templates_file, 'w', encoding='utf-8') as f:
                     json.dump(templates, f, ensure_ascii=False, indent=2)
+                
+                # 如果删除的是默认模板,清除默认设置
+                if self.get_default_template() == name:
+                    self.set_default_template(None)
                 
                 self.logger.info(f"模板 '{name}' 已删除")
                 return True

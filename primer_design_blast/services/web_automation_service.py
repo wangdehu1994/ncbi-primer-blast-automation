@@ -34,6 +34,7 @@ except ImportError:
 from ..models.config import AppConfig
 from ..models.primer_params import PrimerParams
 from ..utils.resource_utils import get_resource_path
+from .element_locator import ElementLocator
 
 
 class PrimerBlastPage:
@@ -44,6 +45,8 @@ class PrimerBlastPage:
         self.config = config
         self.selectors = config.WEB_SELECTORS
         self.logger = logging.getLogger(__name__)
+        # 使用智能元素定位器
+        self.locator = ElementLocator(driver)
     
     def wait_for_element(self, by: By, value: str, timeout: int = 20):
         """等待元素可见"""
@@ -59,42 +62,64 @@ class PrimerBlastPage:
     
     def click_one_target_tab(self):
         """点击单目标标签"""
-        tab = self.wait_for_clickable(By.ID, self.selectors['one_target_tab'])
-        ActionChains(self.driver).move_to_element(tab).click().perform()
-        self.logger.debug("已切换到单目标模式")
+        tab = self.locator.find_element('one_target_tab', wait_clickable=True)
+        if tab:
+            ActionChains(self.driver).move_to_element(tab).click().perform()
+            self.logger.debug("已切换到单目标模式")
+        else:
+            raise Exception("无法定位到单目标标签")
     
     def click_advanced_button(self):
         """点击高级设置按钮"""
-        button = self.wait_for_clickable(By.ID, self.selectors['advanced_button'])
-        button.click()
-        self.logger.debug("已打开高级设置")
+        button = self.locator.find_element('advanced_button', wait_clickable=True)
+        if button:
+            button.click()
+            self.logger.debug("已打开高级设置")
+        else:
+            raise Exception("无法定位到高级设置按钮")
     
     def set_sequence_id(self, accession: str):
         """设置序列ID"""
-        seq_box = self.driver.find_element(By.ID, self.selectors['seq_input'])
-        seq_box.clear()
-        seq_box.send_keys(str(accession))
-        self.logger.debug(f"已设置序列ID: {accession}")
+        seq_box = self.locator.find_element('seq_input')
+        if seq_box:
+            seq_box.clear()
+            seq_box.send_keys(str(accession))
+            self.logger.debug(f"已设置序列ID: {accession}")
+        else:
+            raise Exception("无法定位到序列输入框")
     
     def set_pcr_product_size(self, min_size: int, max_size: int):
         """设置PCR产物大小"""
-        self.driver.find_element(By.ID, self.selectors['pcr_min']).clear()
-        self.driver.find_element(By.ID, self.selectors['pcr_min']).send_keys(str(min_size))
-        self.driver.find_element(By.ID, self.selectors['pcr_max']).clear()
-        self.driver.find_element(By.ID, self.selectors['pcr_max']).send_keys(str(max_size))
-        self.logger.debug(f"已设置PCR产物大小: {min_size}-{max_size}")
+        pcr_min = self.locator.find_element('pcr_min')
+        pcr_max = self.locator.find_element('pcr_max')
+        if pcr_min and pcr_max:
+            pcr_min.clear()
+            pcr_min.send_keys(str(min_size))
+            pcr_max.clear()
+            pcr_max.send_keys(str(max_size))
+            self.logger.debug(f"已设置PCR产物大小: {min_size}-{max_size}")
+        else:
+            raise Exception("无法定位到PCR产物大小输入框")
     
     def set_tm_values(self, tm_min: float, tm_opt: float, tm_max: float, tm_diff: int):
         """设置Tm值"""
-        self.driver.find_element(By.ID, self.selectors['tm_min']).clear()
-        self.driver.find_element(By.ID, self.selectors['tm_min']).send_keys(str(tm_min))
-        self.driver.find_element(By.ID, self.selectors['tm_opt']).clear()
-        self.driver.find_element(By.ID, self.selectors['tm_opt']).send_keys(str(tm_opt))
-        self.driver.find_element(By.ID, self.selectors['tm_max']).clear()
-        self.driver.find_element(By.ID, self.selectors['tm_max']).send_keys(str(tm_max))
-        self.driver.find_element(By.ID, self.selectors['tm_max_diff']).clear()
-        self.driver.find_element(By.ID, self.selectors['tm_max_diff']).send_keys(str(tm_diff))
-        self.logger.debug(f"已设置Tm值: {tm_min}/{tm_opt}/{tm_max}, 差值:{tm_diff}")
+        tm_min_elem = self.locator.find_element('tm_min')
+        tm_opt_elem = self.locator.find_element('tm_opt')
+        tm_max_elem = self.locator.find_element('tm_max')
+        tm_diff_elem = self.locator.find_element('tm_max_diff')
+        
+        if all([tm_min_elem, tm_opt_elem, tm_max_elem, tm_diff_elem]):
+            tm_min_elem.clear()
+            tm_min_elem.send_keys(str(tm_min))
+            tm_opt_elem.clear()
+            tm_opt_elem.send_keys(str(tm_opt))
+            tm_max_elem.clear()
+            tm_max_elem.send_keys(str(tm_max))
+            tm_diff_elem.clear()
+            tm_diff_elem.send_keys(str(tm_diff))
+            self.logger.debug(f"已设置Tm值: {tm_min}/{tm_opt}/{tm_max}, 差值:{tm_diff}")
+        else:
+            raise Exception("无法定位到Tm值输入框")
     
     def set_primer_size(self, min_size: int, opt_size: int, max_size: int):
         """设置引物大小"""
@@ -177,9 +202,12 @@ class PrimerBlastPage:
         """提交表单并返回新标签页句柄"""
         old_handles = self.driver.window_handles
         
-        submit_btn = self.wait_for_clickable(By.CSS_SELECTOR, self.selectors['submit_button'])
-        submit_btn.click()
-        self.logger.info("表单已提交")
+        submit_btn = self.locator.find_element('submit_button', wait_clickable=True)
+        if submit_btn:
+            submit_btn.click()
+            self.logger.info("表单已提交")
+        else:
+            raise Exception("无法定位到提交按钮")
         
         # 等待新标签页
         WebDriverWait(self.driver, 15).until(lambda drv: len(drv.window_handles) > len(old_handles))
@@ -191,6 +219,24 @@ class PrimerBlastPage:
         if diff:
             return diff.pop()
         return None
+    
+    def validate_page_elements(self) -> bool:
+        """验证页面关键元素是否可定位"""
+        self.logger.info("开始验证页面元素...")
+        results = self.locator.validate_all_elements(timeout=5)
+        
+        critical_elements = [
+            'seq_input', 'one_target_tab', 'pcr_min', 'pcr_max',
+            'submit_button'
+        ]
+        
+        for elem in critical_elements:
+            if not results.get(elem, False):
+                self.logger.error(f"关键元素 '{elem}' 无法定位,页面可能已变更")
+                return False
+        
+        self.logger.info("页面元素验证通过")
+        return True
 
 
 class WebAutomationService:
@@ -316,21 +362,19 @@ class WebAutomationService:
                 self.page_initialized = False
                 self.current_browser = None
     
-    def initialize_page(self, params: PrimerParams) -> Tuple[bool, Optional[str]]:
+    def open_primer_blast(self) -> bool:
         """
-        初始化Primer-BLAST页面（只执行一次）
+        打开Primer-BLAST网页
         
-        Args:
-            params: 引物参数
-            
         Returns:
-            (success, error_message)
+            是否成功打开
         """
         if not self.driver:
-            return False, "浏览器驱动未启动"
+            self.logger.error("浏览器驱动未启动")
+            return False
         
         try:
-            self.logger.info("正在加载 Primer-BLAST 网页...")
+            self.logger.info("正在打开 Primer-BLAST 网页...")
             self.driver.get(self.config.PRIMER_BLAST_URL)
             
             # 等待页面加载
@@ -345,6 +389,46 @@ class WebAutomationService:
             WebDriverWait(self.driver, self.config.PAGE_LOAD_TIMEOUT).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
             )
+            
+            self.logger.info("Primer-BLAST 网页已打开")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"打开网页失败: {e}")
+            return False
+    
+    def initialize_page(self, params: PrimerParams) -> Tuple[bool, Optional[str]]:
+        """
+        初始化Primer-BLAST页面（只执行一次）
+        
+        Args:
+            params: 引物参数
+            
+        Returns:
+            (success, error_message)
+        """
+        if not self.driver:
+            return False, "浏览器驱动未启动"
+        
+        try:
+            # 如果当前不在Primer-BLAST页面,则跳转到该页面
+            current_url = self.driver.current_url
+            if "primer-blast" not in current_url.lower():
+                self.logger.info("正在加载 Primer-BLAST 网页...")
+                self.driver.get(self.config.PRIMER_BLAST_URL)
+                
+                # 等待页面加载
+                WebDriverWait(self.driver, self.config.PAGE_LOAD_TIMEOUT).until(
+                    EC.url_contains("primer-blast")
+                )
+                
+                # 刷新data:URL
+                if "data:" in self.driver.current_url:
+                    self.driver.refresh()
+                
+                WebDriverWait(self.driver, self.config.PAGE_LOAD_TIMEOUT).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
+                )
             
             self.logger.info("正在配置 Primer-BLAST 参数...")
             
