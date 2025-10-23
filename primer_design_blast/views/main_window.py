@@ -159,13 +159,6 @@ class MainWindow(QMainWindow):
         driver_update_action.triggered.connect(self.update_driver)
         tools_menu.addAction(driver_update_action)
 
-        settings_action = QAction("设置...", self)
-        settings_action.setShortcut("Ctrl+,")
-        settings_action.triggered.connect(self.open_settings)
-        tools_menu.addAction(settings_action)
-
-        tools_menu.addSeparator()
-
         close_browser_action = QAction("关闭浏览器", self)
         close_browser_action.triggered.connect(self.close_browser)
         tools_menu.addAction(close_browser_action)
@@ -225,9 +218,8 @@ class MainWindow(QMainWindow):
     
     def create_parameter_area(self) -> CollapsibleBox:
         """创建参数设置区域"""
-        self.param_group = QGroupBox("引物参数设置")
-        self.add_shadow(self.param_group)
-
+        # 创建参数内容容器
+        param_content = QWidget()
         layout = QVBoxLayout()
         layout.setSpacing(12)
         layout.setContentsMargins(12, 12, 12, 12)
@@ -394,6 +386,9 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(manage_btn)
         button_layout.addStretch()
         layout.addLayout(button_layout)
+        
+        # 设置布局到参数内容容器
+        param_content.setLayout(layout)
         
         # 将内容添加到可折叠组件
         self.param_collapsible.add_widget(param_content)
