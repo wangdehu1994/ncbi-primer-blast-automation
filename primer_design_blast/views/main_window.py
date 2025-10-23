@@ -218,6 +218,9 @@ class MainWindow(QMainWindow):
     
     def create_parameter_area(self) -> CollapsibleBox:
         """创建参数设置区域"""
+        # 创建可折叠组件
+        self.param_collapsible = CollapsibleBox("引物参数设置")
+        
         # 创建参数内容容器
         param_content = QWidget()
         layout = QVBoxLayout()
