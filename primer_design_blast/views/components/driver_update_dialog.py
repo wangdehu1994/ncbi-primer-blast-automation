@@ -187,11 +187,11 @@ class DriverUpdateDialog(QDialog):
         self.progress_bar.setVisible(False)
         
         if success:
-            self.status_label.setText("✅ 更新完成")
-            self.status_label.setStyleSheet("color: green; font-weight: bold;")
+            self.status_label.setText("更新完成")
+            self.status_label.setStyleSheet("color: #2f7d3c; font-weight: 600;")
         else:
-            self.status_label.setText("❌ 更新失败")
-            self.status_label.setStyleSheet("color: red; font-weight: bold;")
+            self.status_label.setText("更新失败")
+            self.status_label.setStyleSheet("color: #b42318; font-weight: 600;")
         
         # 添加详细信息到日志
         self.add_log("=" * 50)
