@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, pyqtSignal, QThread
 from PyQt5.QtGui import QFont
 
-from ..services.driver_updater import DriverUpdater
+from ...services.driver_updater import DriverUpdater
 
 
 class DriverUpdateWorker(QThread):
