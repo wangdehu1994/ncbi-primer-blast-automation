@@ -19,8 +19,7 @@ from PyQt5.QtWidgets import (
     QSizePolicy
 )
 from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, pyqtSlot, QThread, pyqtSignal
-from PyQt5.QtGui import QIcon, QColor, QTextCursor
-from PyQt5.QtGui import QIcon, QFont, QColor
+from PyQt5.QtGui import QIcon, QFont, QColor, QTextCursor
 
 from ..models.primer_params import PrimerParams
 from ..models.config import AppConfig, TemplateManager
@@ -29,7 +28,8 @@ from ..utils.resource_utils import get_resource_path
 from .components.message_box import CustomMessageBox
 from .components.template_dialog import TemplateDialog
 from .components.driver_update_dialog import DriverUpdateDialog
-from .components.collapsible_box import CollapsibleBox
+from .components.parameter_dialog import ParameterDialog
+from .components.parameter_dialog import ParameterDialog
 
 
 class WorkerThread(QThread):
@@ -56,6 +56,9 @@ class MainWindow(QMainWindow):
         self.template_manager = TemplateManager()
         self.controller = PrimerController()
         self.worker_thread = None
+        
+        # 当前参数
+        self.current_params = PrimerParams()
         
         # 初始化UI
         self.init_ui()
@@ -88,15 +91,14 @@ class MainWindow(QMainWindow):
         
         # 主布局
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setSpacing(15)
-        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(12)
+        main_layout.setContentsMargins(12, 12, 12, 12)
         
         # 创建各个区域
         main_layout.addWidget(self.create_input_area())
-        main_layout.addWidget(self.create_parameter_area())
         main_layout.addWidget(self.create_progress_area())
-        main_layout.addLayout(self.create_control_buttons())
-        
+        main_layout.addWidget(self.create_control_buttons())
+
         # 应用样式
         self.apply_styles()
     
@@ -141,11 +143,11 @@ class MainWindow(QMainWindow):
         template_menu = menubar.addMenu("模板(&T)")
 
         save_template_action = QAction("保存当前参数为模板...", self)
-        save_template_action.triggered.connect(self.save_template)
+        save_template_action.triggered.connect(lambda: self.open_parameter_dialog(action='save'))
         template_menu.addAction(save_template_action)
 
         load_template_action = QAction("加载参数模板...", self)
-        load_template_action.triggered.connect(self.load_template)
+        load_template_action.triggered.connect(lambda: self.open_parameter_dialog(action='load'))
         template_menu.addAction(load_template_action)
 
         manage_template_action = QAction("管理模板...", self)
@@ -153,7 +155,7 @@ class MainWindow(QMainWindow):
         template_menu.addAction(manage_template_action)
 
         # 工具菜单
-        tools_menu = menubar.addMenu("工具(&T)")
+        tools_menu = menubar.addMenu("工具(&G)")
 
         driver_update_action = QAction("更新浏览器驱动...", self)
         driver_update_action.triggered.connect(self.update_driver)
@@ -177,459 +179,351 @@ class MainWindow(QMainWindow):
     
     def create_input_area(self) -> QGroupBox:
         """创建输入区域"""
-        group = QGroupBox("批量基因组坐标输入")
+        group = QGroupBox("1. 核心输入")
 
         layout = QFormLayout()
-        layout.setLabelAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        layout.setFormAlignment(Qt.AlignLeft | Qt.AlignTop)
-        layout.setHorizontalSpacing(16)
-        layout.setVerticalSpacing(16)
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setLabelAlignment(Qt.AlignLeft)
+        layout.setFormAlignment(Qt.AlignLeft)
+        layout.setHorizontalSpacing(15)
+        layout.setVerticalSpacing(12)
+        layout.setContentsMargins(15, 20, 15, 15)
 
         # 多行输入
         self.input_text = QPlainTextEdit()
         self.input_text.setPlaceholderText(
-            "请输入染色体坐标信息，每行一组。格式：chr1 123456 (染色体号 + 空格 + 位点)\n"
-            "支持 1-22 号染色体及 X、Y 染色体。可粘贴多行数据批量处理。\n\n"
-            "示例：\n"
-            "chr1 123456\n"
-            "chr2 234567\n"
-            "X 345678"
+            "请输入染色体坐标，每行一组，格式：chr1 123456\n"
+            "支持1-22号染色体及X、Y。可直接粘贴多行数据。"
         )
         self.input_text.setMinimumHeight(120)
         self.input_text.setMaximumHeight(180)
         self.input_text.setLineWrapMode(QPlainTextEdit.NoWrap)
-        layout.addRow("坐标内容:", self.input_text)
+        layout.addRow("批量坐标:", self.input_text)
         
-        # 基因组版本
+        # 基因组版本和浏览器
+        options_layout = QHBoxLayout()
+        options_layout.setSpacing(10)
+        
         self.version_combo = QComboBox()
-        self.version_combo.addItems(["hg38/GRCh38", "hg19/GRCh37"])
-        self.version_combo.setMinimumWidth(180)
-        self.version_combo.setMinimumHeight(28)
-        layout.addRow("基因组版本:", self.version_combo)
-
-        # 浏览器选择
+        self.version_combo.addItems(["hg19/GRCh37","hg38/GRCh38"])
+        
         self.browser_combo = QComboBox()
         self.browser_combo.addItems(["Edge", "Chrome"])
-        self.browser_combo.setMinimumWidth(180)
-        self.browser_combo.setMinimumHeight(28)
-        layout.addRow("浏览器:", self.browser_combo)
+        
+        options_layout.addWidget(self.version_combo)
+        options_layout.addWidget(self.browser_combo)
+        options_layout.addStretch()
+        
+        layout.addRow("版本/浏览器:", options_layout)
         
         group.setLayout(layout)
         return group
     
-    def create_parameter_area(self) -> CollapsibleBox:
-        """创建参数设置区域"""
-        # 创建可折叠组件
-        self.param_collapsible = CollapsibleBox("引物参数设置")
+    def open_parameter_dialog(self, action: str = None):
+        """打开引物参数设置对话框
         
-        # 创建参数内容容器
-        param_content = QWidget()
-        layout = QVBoxLayout()
-        layout.setSpacing(18)
-        layout.setContentsMargins(20, 20, 20, 20)
+        Args:
+            action: 打开后执行的操作，可选值：'save'(保存模板), 'load'(加载模板), None(正常打开)
+        """
+        dialog = ParameterDialog(self.current_params, self)
         
-        # PCR产物大小
-        pcr_layout = QHBoxLayout()
-        pcr_layout.setSpacing(10)
-        label = QLabel("PCR产物大小 (bp):")
-        label.setMinimumWidth(140)
-        pcr_layout.addWidget(label)
-        self.pcr_min_input = QLineEdit("100")
-        self.pcr_min_input.setMaximumWidth(90)
-        self.pcr_min_input.setMinimumHeight(28)
-        pcr_layout.addWidget(self.pcr_min_input)
-        pcr_layout.addWidget(QLabel("-"))
-        self.pcr_max_input = QLineEdit("1200")
-        self.pcr_max_input.setMaximumWidth(90)
-        self.pcr_max_input.setMinimumHeight(28)
-        pcr_layout.addWidget(self.pcr_max_input)
-        pcr_layout.addStretch()
-        layout.addLayout(pcr_layout)
-        
-        # Tm值
-        tm_layout = QHBoxLayout()
-        tm_layout.setSpacing(10)
-        label = QLabel("Tm值 (°C):")
-        label.setMinimumWidth(140)
-        tm_layout.addWidget(label)
-        self.tm_min_input = QLineEdit("58")
-        self.tm_min_input.setPlaceholderText("最小")
-        self.tm_min_input.setMaximumWidth(70)
-        self.tm_min_input.setMinimumHeight(28)
-        tm_layout.addWidget(self.tm_min_input)
-        
-        self.tm_opt_input = QLineEdit("60")
-        self.tm_opt_input.setPlaceholderText("最佳")
-        self.tm_opt_input.setMaximumWidth(70)
-        self.tm_opt_input.setMinimumHeight(28)
-        tm_layout.addWidget(self.tm_opt_input)
-        
-        self.tm_max_input = QLineEdit("62")
-        self.tm_max_input.setPlaceholderText("最大")
-        self.tm_max_input.setMaximumWidth(70)
-        self.tm_max_input.setMinimumHeight(28)
-        tm_layout.addWidget(self.tm_max_input)
-        
-        tm_layout.addWidget(QLabel("最大差值:"))
-        self.tm_diff_input = QLineEdit("2")
-        self.tm_diff_input.setMaximumWidth(70)
-        self.tm_diff_input.setMinimumHeight(28)
-        tm_layout.addWidget(self.tm_diff_input)
-        tm_layout.addStretch()
-        layout.addLayout(tm_layout)
-        
-        # 引物大小
-        primer_layout = QHBoxLayout()
-        primer_layout.setSpacing(10)
-        label = QLabel("引物大小 (bp):")
-        label.setMinimumWidth(140)
-        primer_layout.addWidget(label)
-        self.primer_min_input = QLineEdit("18")
-        self.primer_min_input.setPlaceholderText("最小")
-        self.primer_min_input.setMaximumWidth(70)
-        self.primer_min_input.setMinimumHeight(28)
-        primer_layout.addWidget(self.primer_min_input)
-        
-        self.primer_opt_input = QLineEdit("20")
-        self.primer_opt_input.setPlaceholderText("最佳")
-        self.primer_opt_input.setMaximumWidth(70)
-        self.primer_opt_input.setMinimumHeight(28)
-        primer_layout.addWidget(self.primer_opt_input)
-        
-        self.primer_max_input = QLineEdit("25")
-        self.primer_max_input.setPlaceholderText("最大")
-        self.primer_max_input.setMaximumWidth(70)
-        self.primer_max_input.setMinimumHeight(28)
-        primer_layout.addWidget(self.primer_max_input)
-        primer_layout.addStretch()
-        layout.addLayout(primer_layout)
-        
-        # 其他参数
-        other_layout = QFormLayout()
-        other_layout.setHorizontalSpacing(16)
-        other_layout.setVerticalSpacing(14)
-        other_layout.setLabelAlignment(Qt.AlignLeft)
-        
-        self.primer_num_input = QLineEdit("10")
-        self.primer_num_input.setMaximumWidth(120)
-        self.primer_num_input.setMinimumHeight(28)
-        other_layout.addRow("返回引物数:", self.primer_num_input)
-        
-        self.gc_max_input = QLineEdit("4")
-        self.gc_max_input.setMaximumWidth(120)
-        self.gc_max_input.setMinimumHeight(28)
-        other_layout.addRow("3'端最大GC:", self.gc_max_input)
-        
-        self.poly_max_input = QLineEdit("4")
-        self.poly_max_input.setMaximumWidth(120)
-        self.poly_max_input.setMinimumHeight(28)
-        other_layout.addRow("最大连续碱基:", self.poly_max_input)
-        
-        self.ext_left_input = QLineEdit("800")
-        self.ext_left_input.setMaximumWidth(120)
-        self.ext_left_input.setMinimumHeight(28)
-        other_layout.addRow("左侧扩展 (bp):", self.ext_left_input)
-        
-        self.ext_right_input = QLineEdit("800")
-        self.ext_right_input.setMaximumWidth(120)
-        self.ext_right_input.setMinimumHeight(28)
-        other_layout.addRow("右侧扩展 (bp):", self.ext_right_input)
-        
-        layout.addLayout(other_layout)
-        
-        # 参数管理按钮
-        button_layout = QHBoxLayout()
-        button_layout.setSpacing(12)
-        
-        reset_btn = QPushButton("重置为默认")
-        reset_btn.setMinimumWidth(100)
-        reset_btn.setMinimumHeight(32)
-        reset_btn.clicked.connect(self.reset_to_default_params)
-        
-        save_btn = QPushButton("保存模板")
-        save_btn.setMinimumWidth(100)
-        save_btn.setMinimumHeight(32)
-        save_btn.clicked.connect(self.save_template)
-        
-        load_btn = QPushButton("加载模板")
-        load_btn.setMinimumWidth(100)
-        load_btn.setMinimumHeight(32)
-        load_btn.clicked.connect(self.load_template)
-        
-        manage_btn = QPushButton("管理模板")
-        manage_btn.setMinimumWidth(100)
-        manage_btn.setMinimumHeight(32)
-        manage_btn.clicked.connect(self.manage_templates)
-        
-        button_layout.addWidget(reset_btn)
-        button_layout.addWidget(save_btn)
-        button_layout.addWidget(load_btn)
-        button_layout.addWidget(manage_btn)
-        button_layout.addStretch()
-        layout.addLayout(button_layout)
-        
-        # 设置布局到参数内容容器
-        param_content.setLayout(layout)
-        
-        # 将内容添加到可折叠组件
-        self.param_collapsible.add_widget(param_content)
-        
-        # 连接折叠状态改变信号
-        self.param_collapsible.collapsed_changed.connect(self.on_param_collapsed_changed)
-        
-        return self.param_collapsible
+        # 根据 action 执行对应操作
+        if action == 'save':
+            dialog.save_template()
+        elif action == 'load':
+            dialog.load_template()
+            
+        if dialog.exec_() == QDialog.Accepted:
+            params = dialog.get_params()
+            if params:
+                self.current_params = params
+                self._add_progress_message(f"参数已更新", "⚙️")
+    
+    def create_control_buttons(self) -> QWidget:
+        """创建控制按钮区域"""
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(15, 5, 15, 5)
+        layout.setSpacing(15)
+
+        # 参数设置按钮
+        self.param_button = QPushButton("⚙️ 参数设置")
+        self.param_button.clicked.connect(self.open_parameter_dialog)
+        self.param_button.setMinimumHeight(36)
+
+        self.start_button = QPushButton("开始处理")
+        self.start_button.setIcon(QIcon(get_resource_path("play.svg")))
+        self.start_button.setObjectName("startButton")
+        self.start_button.setMinimumHeight(36)
+
+        self.stop_button = QPushButton("停止处理")
+        self.stop_button.setIcon(QIcon(get_resource_path("stop.svg")))
+        self.stop_button.setObjectName("stopButton")
+        self.stop_button.setMinimumHeight(36)
+        self.stop_button.setEnabled(False)
+
+        layout.addStretch()
+        layout.addWidget(self.param_button)
+        layout.addWidget(self.start_button)
+        layout.addWidget(self.stop_button)
+        layout.addStretch()
+
+        return widget
     
     def create_progress_area(self) -> QGroupBox:
         """创建进度显示区域"""
-        group = QGroupBox("运行进度")
+        group = QGroupBox("3. 运行日志")
 
         layout = QVBoxLayout()
-        layout.setSpacing(14)
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(10)
+        layout.setContentsMargins(15, 20, 15, 15)
 
-        # 进度条
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setFormat("%p% (%v/%m)")
-        layout.addWidget(self.progress_bar)
+        # 统计信息和进度条
+        progress_layout = QHBoxLayout()
+        progress_layout.setSpacing(10)
         
-        # 统计信息标签
-        stats_layout = QHBoxLayout()
         self.stats_label = QLabel("就绪")
-        self.stats_label.setStyleSheet("color: #4b5563; font-weight: 600;")
-        stats_layout.addWidget(self.stats_label)
-        stats_layout.addStretch()
-        layout.addLayout(stats_layout)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setFormat("%p%")
+        self.progress_bar.setMaximumWidth(200)
+        
+        progress_layout.addWidget(self.stats_label)
+        progress_layout.addStretch()
+        progress_layout.addWidget(self.progress_bar)
+        layout.addLayout(progress_layout)
         
         # 日志显示
         self.progress_display = QPlainTextEdit()
         self.progress_display.setReadOnly(True)
-        self.progress_display.setMaximumHeight(200)
-        self.progress_display.setStyleSheet("""
-            QPlainTextEdit {
-                font-family: 'Consolas', 'Monaco', monospace;
-                font-size: 11px;
-                background-color: #f6f7f9;
-                color: #1f2937;
-                border: 1px solid #cfd5de;
-            }
-        """)
         self.progress_display.setLineWrapMode(QPlainTextEdit.NoWrap)
         self.progress_display.setMaximumBlockCount(500)
+        self.progress_display.setMinimumHeight(120)  # 从200调小，给参数区让路
         layout.addWidget(self.progress_display)
+        
+        # 允许父布局管理高度
+        group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         
         group.setLayout(layout)
         return group
-    
-    def create_control_buttons(self) -> QHBoxLayout:
-        """创建控制按钮"""
-        layout = QHBoxLayout()
-        layout.setSpacing(15)
-        
-        # 开始按钮
-        self.start_button = QPushButton("开始设计引物")
-        self.start_button.setObjectName("start_button")
-        self.start_button.setMinimumHeight(40)
-        self.start_button.setMinimumWidth(140)
-        self.start_button.clicked.connect(self.start_processing)
-        
-        # 停止按钮
-        self.stop_button = QPushButton("停止处理")
-        self.stop_button.setObjectName("stop_button")
-        self.stop_button.setMinimumHeight(40)
-        self.stop_button.setMinimumWidth(140)
-        self.stop_button.setEnabled(False)
-        self.stop_button.clicked.connect(self.stop_processing)
-        
-        layout.addWidget(self.start_button)
-        layout.addWidget(self.stop_button)
-        
-        return layout
-    
+
     def apply_styles(self):
-        """应用全局样式 - 简洁工业风"""
-        self.setStyleSheet("""
-            /* 主窗口背景 */
-            QMainWindow {
-                background-color: #f0f0f0;
-            }
-            
-            /* 全局字体和颜色 */
-            QWidget {
-                font-family: 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
+        """应用QSS样式"""
+        self.setStyleSheet(f"""
+            QMainWindow {{
+                background-color: {self.config.COLOR_BASE};
+            }}
+
+            QWidget {{
+                font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif;
                 font-size: 9pt;
-                color: #000000;
-            }
-            
+                color: #1f2937; /* 深灰色文字 */
+            }}
+
             /* 菜单栏 */
-            QMenuBar {
+            QMenuBar {{
                 background-color: #ffffff;
-                border-bottom: 1px solid #d0d0d0;
-                padding: 2px;
-            }
-            QMenuBar::item {
-                padding: 4px 12px;
+                border-bottom: 1px solid #e5e7eb;
+                padding: 4px;
+            }}
+            QMenuBar::item {{
+                padding: 6px 12px;
                 background: transparent;
-            }
-            QMenuBar::item:selected {
-                background-color: #e5f3ff;
-            }
-            QMenu {
+                border-radius: 4px;
+            }}
+            QMenuBar::item:selected {{
+                background-color: #e5e7eb;
+            }}
+            QMenu {{
                 background-color: #ffffff;
-                border: 1px solid #acacac;
-            }
-            QMenu::item {
-                padding: 5px 25px 5px 20px;
-            }
-            QMenu::item:selected {
-                background-color: #e5f3ff;
-            }
-            
+                border: 1px solid #e5e7eb;
+                border-radius: 4px;
+                padding: 4px;
+            }}
+            QMenu::item {{
+                padding: 6px 24px;
+                border-radius: 3px;
+            }}
+            QMenu::item:selected {{
+                background-color: #4f46e5; /* 强调色 */
+                color: #ffffff;
+            }}
+            QMenu::separator {{
+                height: 1px;
+                background: #e5e7eb;
+                margin: 4px 8px;
+            }}
+
             /* 分组框 */
-            QGroupBox {
+            QGroupBox {{
                 background-color: #ffffff;
-                border: 1px solid #d0d0d0;
-                border-radius: 0px;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
                 margin-top: 8px;
-                padding-top: 8px;
-                font-weight: normal;
-            }
-            QGroupBox::title {
+            }}
+            QGroupBox::title {{
                 subcontrol-origin: margin;
                 subcontrol-position: top left;
-                padding: 2px 6px;
-                color: #000000;
-            }
-            
-            /* 输入框 */
-            QLineEdit, QPlainTextEdit {
+                padding: 4px 10px;
+                margin-left: 10px;
                 background-color: #ffffff;
-                border: 1px solid #acacac;
-                border-radius: 0px;
-                padding: 4px 6px;
-                selection-background-color: #0078d7;
-                selection-color: #ffffff;
-            }
-            QLineEdit:focus, QPlainTextEdit:focus {
-                border: 1px solid #0078d7;
-            }
-            QLineEdit:disabled, QPlainTextEdit:disabled {
-                background-color: #f0f0f0;
-                color: #6d6d6d;
-            }
-            
+                border: 1px solid #e5e7eb;
+                border-bottom: none;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+                font-weight: 600;
+                color: #374151;
+            }}
+
+            /* 输入框和文本域 */
+            QLineEdit, QPlainTextEdit, QComboBox {{
+                background-color: #ffffff;
+                border: 1px solid #d1d5db;
+                border-radius: 4px;
+                padding: 6px 8px;
+                font-size: 9pt;
+                color: #1f2937;
+            }}
+            QLineEdit:hover, QPlainTextEdit:hover, QComboBox:hover {{
+                border-color: #9ca3af;
+            }}
+            QLineEdit:focus, QPlainTextEdit:focus, QComboBox:focus {{
+                border-color: #4f46e5;
+                outline: none;
+            }}
+            QLineEdit {{
+                min-height: 20px;
+            }}
+            QPlainTextEdit {{
+                background-color: #f9fafb;
+            }}
+
             /* 下拉框 */
-            QComboBox {
-                background-color: #ffffff;
-                border: 1px solid #acacac;
-                border-radius: 0px;
-                padding: 4px 6px;
-            }
-            QComboBox:hover {
-                border: 1px solid #0078d7;
-            }
-            QComboBox:focus {
-                border: 1px solid #0078d7;
-            }
-            QComboBox::drop-down {
-                border: none;
+            QComboBox::drop-down {{
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
                 width: 20px;
-            }
-            QComboBox::down-arrow {
-                image: none;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 5px solid #606060;
-                margin-right: 5px;
-            }
-            QComboBox QAbstractItemView {
+                border-left: 1px solid #d1d5db;
+                border-top-right-radius: 4px;
+                border-bottom-right-radius: 4px;
+            }}
+            QComboBox::down-arrow {{
+                image: url({get_resource_path('chevron-down.svg').replace(os.sep, '/')});
+                width: 14px;
+                height: 14px;
+            }}
+            QComboBox QAbstractItemView {{
                 background-color: #ffffff;
-                border: 1px solid #acacac;
-                selection-background-color: #e5f3ff;
-                selection-color: #000000;
-            }
-            
+                border: 1px solid #d1d5db;
+                border-radius: 4px;
+                selection-background-color: #e0e7ff;
+                selection-color: #374151;
+                padding: 2px;
+            }}
+
             /* 按钮 */
-            QPushButton {
-                background-color: #e1e1e1;
-                border: 1px solid #adadad;
-                border-radius: 0px;
-                padding: 6px 16px;
-                color: #000000;
-            }
-            QPushButton:hover {
-                background-color: #e5f3ff;
-                border: 1px solid #0078d7;
-            }
-            QPushButton:pressed {
-                background-color: #cce8ff;
-                border: 1px solid #005499;
-            }
-            QPushButton:disabled {
-                background-color: #f0f0f0;
-                border: 1px solid #d0d0d0;
-                color: #6d6d6d;
-            }
-            
-            /* 主按钮(开始按钮) */
-            QPushButton#start_button {
-                background-color: #0078d7;
-                border: 1px solid #005a9e;
-                color: #ffffff;
-                font-weight: bold;
-            }
-            QPushButton#start_button:hover {
-                background-color: #005a9e;
-            }
-            QPushButton#start_button:pressed {
-                background-color: #004578;
-            }
-            QPushButton#start_button:disabled {
-                background-color: #cccccc;
-                border: 1px solid #acacac;
-                color: #6d6d6d;
-            }
-            
-            /* 危险按钮(停止按钮) */
-            QPushButton#stop_button {
-                background-color: #e81123;
-                border: 1px solid #c50f1f;
-                color: #ffffff;
-                font-weight: bold;
-            }
-            QPushButton#stop_button:hover {
-                background-color: #c50f1f;
-            }
-            QPushButton#stop_button:pressed {
-                background-color: #a80d1a;
-            }
-            QPushButton#stop_button:disabled {
-                background-color: #cccccc;
-                border: 1px solid #acacac;
-                color: #6d6d6d;
-            }
-            
-            /* 进度条 */
-            QProgressBar {
+            QPushButton {{
                 background-color: #ffffff;
-                border: 1px solid #acacac;
-                border-radius: 0px;
+                border: 1px solid #d1d5db;
+                border-radius: 4px;
+                padding: 7px 15px;
+                font-weight: 600;
+                color: #374151;
+                min-width: 70px;
+            }}
+            QPushButton:hover {{
+                background-color: #f9fafb;
+                border-color: #9ca3af;
+            }}
+            QPushButton:pressed {{
+                background-color: #f3f4f6;
+            }}
+            QPushButton:disabled {{
+                background-color: #f3f4f6;
+                color: #9ca3af;
+                border-color: #e5e7eb;
+            }}
+
+            /* 主按钮 (开始) */
+            QPushButton#startButton {{
+                background-color: {self.config.COLOR_ACCENT};
+                color: white;
+                font-weight: bold;
+                border-radius: 5px;
+                padding: 8px 16px;
+            }}
+            QPushButton#startButton:hover {{
+                background-color: {self.config.COLOR_ACCENT_HOVER};
+            }}
+            QPushButton#startButton:pressed {{
+                background-color: {self.config.COLOR_ACCENT_PRESSED};
+            }}
+
+            /* 危险按钮 (停止) */
+            QPushButton#stopButton {{
+                background-color: #dc2626; /* red-600 */
+                color: white;
+                font-weight: bold;
+                border-radius: 5px;
+                padding: 8px 16px;
+            }}
+            QPushButton#stopButton:hover {{
+                background-color: #b91c1c; /* red-700 */
+            }}
+            QPushButton#stopButton:pressed {{
+                background-color: #991b1b; /* red-800 */
+            }}
+            
+            QPushButton#stopButton:disabled {{
+                background-color: #fca5a5; /* red-300 */
+                color: #fef2f2; /* red-50 */
+            }}
+
+            /* 按钮图标 */
+            QPushButton > QIcon {{
+                color: #ffffff;
+            }}
+
+            /* 进度条 */
+            QProgressBar {{
+                border: 1px solid #e5e7eb;
+                border-radius: 4px;
                 text-align: center;
-                height: 20px;
-            }
-            QProgressBar::chunk {
-                background-color: #0078d7;
-            }
+                background-color: #e5e7eb;
+                color: #4b5563;
+                font-weight: 600;
+            }}
+            QProgressBar::chunk {{
+                background-color: #4f46e5;
+                border-radius: 3px;
+            }}
+            
+            /* 标签 */
+            QLabel {{
+                color: #374151;
+            }}
+            
+            /* 日志区域 */
+            #log_display {{
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 9pt;
+                background-color: #f9fafb;
+                color: #374151;
+                border: 1px solid #e5e7eb;
+            }}
         """)
     
     def setup_connections(self):
         """设置信号连接"""
+        # 控制器信号连接
         self.controller.progress_updated.connect(self.on_progress_updated)
         self.controller.stats_updated.connect(self.on_stats_updated)
         self.controller.task_started.connect(self.on_task_started)
         self.controller.task_completed.connect(self.on_task_completed)
         self.controller.task_stopped.connect(self.on_task_stopped)
         self.controller.error_occurred.connect(self.on_error_occurred)
+        
+        # 按钮连接
+        self.start_button.clicked.connect(self.start_processing)
+        self.stop_button.clicked.connect(self.stop_processing)
     
     def load_default_params(self):
         """加载默认参数"""
@@ -639,62 +533,19 @@ class MainWindow(QMainWindow):
             if default_template:
                 params = self.template_manager.load_template(default_template)
                 if params:
-                    self.set_params(params)
+                    self.current_params = params
                     self.logger.info(f"已加载默认模板: {default_template}")
-                    self.on_progress_updated(f"已自动加载默认模板: {default_template}", "⭐")
                     return
             
             # 如果没有默认模板,使用出厂默认值
-            params = PrimerParams()
-            self.set_params(params)
+            self.current_params = PrimerParams()
             self.logger.info("已加载出厂默认参数")
         except Exception as e:
             self.logger.error(f"加载默认参数失败: {e}")
     
     def get_current_params(self) -> Optional[PrimerParams]:
         """获取当前参数设置"""
-        try:
-            params = PrimerParams(
-                pcr_min=int(self.pcr_min_input.text()),
-                pcr_max=int(self.pcr_max_input.text()),
-                tm_min=float(self.tm_min_input.text()),
-                tm_opt=float(self.tm_opt_input.text()),
-                tm_max=float(self.tm_max_input.text()),
-                tm_max_difference=int(self.tm_diff_input.text()),
-                primer_min_size=int(self.primer_min_input.text()),
-                primer_opt_size=int(self.primer_opt_input.text()),
-                primer_max_size=int(self.primer_max_input.text()),
-                primer_num_return=int(self.primer_num_input.text()),
-                end_gc_max=int(self.gc_max_input.text()),
-                max_poly_x=int(self.poly_max_input.text()),
-                extension_left=int(self.ext_left_input.text()),
-                extension_right=int(self.ext_right_input.text())
-            )
-            return params
-        except ValueError as e:
-            CustomMessageBox.show_error(
-                self,
-                "参数错误",
-                f"参数格式不正确：{str(e)}"
-            )
-            return None
-    
-    def set_params(self, params: PrimerParams):
-        """设置参数到界面"""
-        self.pcr_min_input.setText(str(params.pcr_min))
-        self.pcr_max_input.setText(str(params.pcr_max))
-        self.tm_min_input.setText(str(params.tm_min))
-        self.tm_opt_input.setText(str(params.tm_opt))
-        self.tm_max_input.setText(str(params.tm_max))
-        self.tm_diff_input.setText(str(params.tm_max_difference))
-        self.primer_min_input.setText(str(params.primer_min_size))
-        self.primer_opt_input.setText(str(params.primer_opt_size))
-        self.primer_max_input.setText(str(params.primer_max_size))
-        self.primer_num_input.setText(str(params.primer_num_return))
-        self.gc_max_input.setText(str(params.end_gc_max))
-        self.poly_max_input.setText(str(params.max_poly_x))
-        self.ext_left_input.setText(str(params.extension_left))
-        self.ext_right_input.setText(str(params.extension_right))
+        return self.current_params
     
     # ========== 槽函数 ==========
     
@@ -731,13 +582,14 @@ class MainWindow(QMainWindow):
     
     @pyqtSlot(str)
     def on_progress_updated(self, message: str):
-        """进度更新"""
+        """进度更新 - 从信号触发"""
+        self._add_progress_message(message, "➡️")
+    
+    def _add_progress_message(self, message: str, icon: str = "➡️"):
+        """添加进度消息到显示区域"""
         from datetime import datetime
         timestamp = datetime.now().strftime("%H:%M:%S")
-        self.progress_display.appendPlainText(f"[{timestamp}] {message}")
-        cursor = self.progress_display.textCursor()
-        cursor.movePosition(QTextCursor.End)
-        self.progress_display.setTextCursor(cursor)
+        self.progress_display.appendPlainText(f"{icon} [{timestamp}] {message}")
         self.progress_display.ensureCursorVisible()
     
     @pyqtSlot(ProcessingStats)
@@ -748,9 +600,8 @@ class MainWindow(QMainWindow):
         
         self.stats_label.setText(
             f"总计: {stats.total} | "
-            f"已处理: {stats.processed} | "
-            f"成功: {stats.success} | "
-            f"失败: {stats.failed}"
+            f"成功: <font color='#16a34a'>{stats.success}</font> | "
+            f"失败: <font color='#dc2626'>{stats.failed}</font>"
         )
     
     @pyqtSlot()
@@ -759,6 +610,7 @@ class MainWindow(QMainWindow):
         self.start_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         self.progress_bar.setValue(0)
+        self.progress_display.clear()
     
     @pyqtSlot(ProcessingStats)
     def on_task_completed(self, stats: ProcessingStats):
@@ -777,37 +629,15 @@ class MainWindow(QMainWindow):
         """任务停止"""
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
+        self._add_progress_message("任务已被用户手动停止。", "🛑")
     
     @pyqtSlot(str, str)
     def on_error_occurred(self, title: str, message: str):
         """错误发生"""
         CustomMessageBox.show_error(self, title, message)
+        self._add_progress_message(f"错误: {title} - {message}", "❌")
     
-    def on_param_collapsed_changed(self, is_collapsed: bool):
-        """参数区域折叠状态改变"""
-        # 使用QTimer延迟调整,确保动画完成
-        from PyQt5.QtCore import QTimer
-        QTimer.singleShot(self.param_collapsible.animation_duration + 50, self.adjust_window_size)
-    
-    def adjust_window_size(self):
-        """根据内容调整窗口大小"""
-        try:
-            # 获取当前窗口大小
-            current_size = self.size()
-            
-            # 计算理想高度
-            ideal_height = self.centralWidget().sizeHint().height() + self.menuBar().height() + 50
-            
-            # 限制在合理范围内
-            min_height = 600
-            max_height = 900
-            new_height = max(min_height, min(ideal_height, max_height))
-            
-            # 平滑调整窗口大小
-            if abs(new_height - current_size.height()) > 50:  # 只在变化较大时调整
-                self.resize(current_size.width(), new_height)
-        except Exception as e:
-            self.logger.debug(f"调整窗口大小时出错: {e}")
+
     
     # ========== 菜单操作 ==========
     
@@ -825,7 +655,7 @@ class MainWindow(QMainWindow):
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
                 self.input_text.setPlainText(content)
-                self.on_progress_updated(f"已导入: {file_path}")
+                self._add_progress_message(f"已从文件导入坐标: {os.path.basename(file_path)}", "📥")
             except Exception as e:
                 CustomMessageBox.show_error(self, "导入失败", str(e))
     
@@ -839,7 +669,7 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             "保存坐标文件",
-            "",
+            "coordinates.txt",
             "文本文件 (*.txt);;CSV文件 (*.csv)"
         )
         
@@ -847,7 +677,7 @@ class MainWindow(QMainWindow):
             try:
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(content)
-                self.on_progress_updated(f"已导出: {file_path}")
+                self._add_progress_message(f"坐标已导出至: {os.path.basename(file_path)}", "📤")
             except Exception as e:
                 CustomMessageBox.show_error(self, "导出失败", str(e))
     
@@ -856,11 +686,13 @@ class MainWindow(QMainWindow):
         reply = CustomMessageBox.show_question(
             self,
             "确认清空",
-            "确定要清空所有输入吗？"
+            "确定要清空所有输入和日志吗？"
         )
         if reply == QMessageBox.Yes:
             self.input_text.clear()
             self.progress_display.clear()
+            self.stats_label.setText("就绪")
+            self.progress_bar.setValue(0)
     
     def validate_coordinates(self):
         """验证坐标"""
@@ -882,62 +714,12 @@ class MainWindow(QMainWindow):
                 for r in invalid[:10]
             ])
             CustomMessageBox.show_info(self, "验证结果", msg, details)
+            self._add_progress_message(f"坐标验证完成。有效: {len(valid)}, 无效: {len(invalid)}", "⚠️")
         else:
             CustomMessageBox.show_success(self, "验证通过", msg)
+            self._add_progress_message(f"坐标验证通过，共 {len(valid)} 组有效。", "✅")
     
-    def save_template(self):
-        """保存模板"""
-        params = self.get_current_params()
-        if not params:
-            return
-        
-        name, ok = QInputDialog.getText(self, "保存模板", "模板名称:")
-        if ok and name:
-            if self.template_manager.save_template(name, params):
-                CustomMessageBox.show_success(
-                    self,
-                    "保存成功",
-                    f"模板 '{name}' 已保存"
-                )
-            else:
-                CustomMessageBox.show_error(self, "保存失败", "无法保存模板")
-    
-    def load_template(self):
-        """加载模板"""
-        names = self.template_manager.get_template_names()
-        if not names:
-            CustomMessageBox.show_info(self, "无模板", "还没有保存的模板")
-            return
-        
-        name, ok = QInputDialog.getItem(
-            self,
-            "加载模板",
-            "选择模板:",
-            names,
-            0,
-            False
-        )
-        
-        if ok and name:
-            params = self.template_manager.load_template(name)
-            if params:
-                self.set_params(params)
-                self.on_progress_updated(f"已加载模板: {name}")
-            else:
-                CustomMessageBox.show_error(self, "加载失败", "无法加载模板")
-    
-    def reset_to_default_params(self):
-        """重置为默认参数"""
-        reply = CustomMessageBox.show_question(
-            self,
-            "确认重置",
-            "确定要将参数重置为默认值吗？"
-        )
-        if reply == QMessageBox.Yes:
-            default_params = PrimerParams()  # 获取默认参数
-            self.set_params(default_params)
-            self.on_progress_updated("已重置为默认参数", "🔄")
-            CustomMessageBox.show_success(self, "重置成功", "参数已重置为默认值")
+
     
     def manage_templates(self):
         """管理模板"""
@@ -950,7 +732,7 @@ class MainWindow(QMainWindow):
                     params = self.template_manager.load_template(selected_template)
                     if params:
                         self.set_params(params)
-                        self.on_progress_updated(f"已加载模板: {selected_template}", "📋")
+                        self._add_progress_message(f"已加载模板: {selected_template}", "📋")
         except Exception as e:
             self.logger.error(f"打开模板管理对话框失败: {e}", exc_info=True)
             CustomMessageBox.show_error(
@@ -998,7 +780,7 @@ class MainWindow(QMainWindow):
                     return
             
             # 执行验证
-            self.on_progress_updated("正在验证页面元素...", "🔍")
+            self._add_progress_message("正在验证页面元素...", "🔍")
             success = self.controller.web_service.page.validate_page_elements()
             
             if success:

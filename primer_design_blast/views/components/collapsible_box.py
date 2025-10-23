@@ -9,6 +9,8 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, pyqtSignal
 from PyQt5.QtGui import QIcon
+from ...utils.resource_utils import get_resource_path
+import os
 
 
 class CollapsibleBox(QWidget):
@@ -21,133 +23,133 @@ class CollapsibleBox(QWidget):
         super().__init__(parent)
         
         self.is_collapsed = False
-        self.animation_duration = 300
+        self.animation_duration = 250
         
-        # 主布局
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         
         # 标题栏
-        self.toggle_button = QPushButton()
-        self.toggle_button.setCheckable(True)
-        self.toggle_button.setChecked(False)
-        self.toggle_button.clicked.connect(self.toggle)
-        
-        # 标题文本
-        self.title_label = QLabel(title)
-        self.title_label.setStyleSheet("""
-            QLabel {
-                font-size: 9pt;
-                font-weight: normal;
-                color: #000000;
-                padding-left: 5px;
-            }
-        """)
-        
-        # 标题栏布局
-        header_layout = QHBoxLayout()
-        header_layout.setContentsMargins(8, 6, 8, 6)
-        header_layout.addWidget(self.toggle_button)
-        header_layout.addWidget(self.title_label)
-        header_layout.addStretch()
-        
-        # 标题栏容器
-        self.header_widget = QFrame()
-        self.header_widget.setLayout(header_layout)
-        self.header_widget.setStyleSheet("""
-            QFrame {
-                background-color: #ffffff;
-                border: 1px solid #d0d0d0;
-                border-radius: 0px;
-            }
-            QPushButton {
-                background-color: transparent;
-                border: none;
-                font-size: 14px;
-                padding: 0;
-                min-width: 18px;
-                min-height: 18px;
-                max-width: 18px;
-                max-height: 18px;
-            }
-            QPushButton:hover {
-                background-color: #e5f3ff;
-                border-radius: 0px;
-            }
-        """)
+        self.header_widget = QPushButton(title)
+        self.header_widget.setCheckable(True)
+        self.header_widget.setChecked(False)
+        self.header_widget.clicked.connect(self.toggle)
+        self.header_widget.setObjectName("collapsible_header")
         
         # 内容容器
         self.content_widget = QFrame()
+        self.content_widget.setObjectName("collapsible_content")
         self.content_layout = QVBoxLayout(self.content_widget)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
         self.content_layout.setSpacing(0)
-        self.content_widget.setStyleSheet("""
-            QFrame {
-                background-color: #ffffff;
-                border: 1px solid #d0d0d0;
-                border-top: none;
-                border-radius: 0px;
-            }
-        """)
         
         # 折叠动画
         self.toggle_animation = QPropertyAnimation(self.content_widget, b"maximumHeight")
         self.toggle_animation.setDuration(self.animation_duration)
-        self.toggle_animation.setEasingCurve(QEasingCurve.InOutQuad)
+        self.toggle_animation.setEasingCurve(QEasingCurve.InOutCubic)
         
-        # 添加到主布局
         main_layout.addWidget(self.header_widget)
         main_layout.addWidget(self.content_widget)
         
-        # 更新按钮图标
-        self.update_toggle_icon()
-    
+        self.apply_styles()
+
+    def apply_styles(self):
+        """应用样式"""
+        self.setStyleSheet(f"""
+            #collapsible_header {{
+                background-color: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+                padding: 8px 10px;
+                text-align: left;
+                font-weight: 600;
+                color: #374151;
+            }}
+            #collapsible_header:hover {{
+                background-color: #f9fafb;
+            }}
+            #collapsible_header:checked {{
+                border-bottom-left-radius: 6px;
+                border-bottom-right-radius: 6px;
+            }}
+            #collapsible_content {{
+                background-color: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-top: none;
+                border-bottom-left-radius: 6px;
+                border-bottom-right-radius: 6px;
+            }}
+        """)
+
     def set_title(self, title: str):
         """设置标题"""
-        self.title_label.setText(title)
+        self.header_widget.setText(title)
     
     def add_widget(self, widget: QWidget):
         """添加内容组件"""
         self.content_layout.addWidget(widget)
+        # 添加内容后，确保内容区域有足够的高度和正确的尺寸策略
+        self.content_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.content_widget.setMinimumHeight(1)  # 避免 sizeHint=0
+        self.content_widget.adjustSize()
+        self.content_widget.setMaximumHeight(16777215)
     
     def add_layout(self, layout):
         """添加内容布局"""
         self.content_layout.addLayout(layout)
+        # 添加内容后，确保内容区域有足够的高度和正确的尺寸策略
+        self.content_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.content_widget.setMinimumHeight(1)  # 避免 sizeHint=0
+        self.content_widget.adjustSize()
+        self.content_widget.setMaximumHeight(16777215)
     
     def toggle(self):
         """切换折叠状态"""
-        self.is_collapsed = self.toggle_button.isChecked()
+        self.is_collapsed = self.header_widget.isChecked()
         
-        # 记录内容高度
-        content_height = self.content_layout.sizeHint().height() + 20
+        # 获取内容的实际高度（兜底避免0）
+        content_height = max(self.content_widget.sizeHint().height(), 1)
         
         if self.is_collapsed:
-            # 折叠
-            start_height = self.content_widget.height()
-            self.toggle_animation.setStartValue(start_height)
+            # 折叠：从当前高度缩小到0
+            self.toggle_animation.setStartValue(self.content_widget.height())
             self.toggle_animation.setEndValue(0)
-            # 设置最大高度为0,确保完全隐藏
-            self.content_widget.setMaximumHeight(0)
         else:
-            # 展开
-            self.content_widget.setMaximumHeight(16777215)  # 恢复最大高度
+            # 展开：先设置一个足够大的最大高度，然后动画到实际高度
+            self.content_widget.setMaximumHeight(16777215)
             self.toggle_animation.setStartValue(0)
             self.toggle_animation.setEndValue(content_height)
         
         self.toggle_animation.start()
-        self.update_toggle_icon()
+        
+        # 动画结束后，如果是展开状态，移除最大高度限制
+        if not self.is_collapsed:
+            try:
+                self.toggle_animation.finished.disconnect(self._on_expand_finished)
+            except Exception:
+                pass
+            self.toggle_animation.finished.connect(self._on_expand_finished)
+        
         self.collapsed_changed.emit(self.is_collapsed)
     
-    def update_toggle_icon(self):
-        """更新折叠按钮图标"""
-        if self.is_collapsed:
-            self.toggle_button.setText("▷")
-        else:
-            self.toggle_button.setText("▽")
-    
+    def _on_expand_finished(self):
+        """展开动画完成后，移除高度限制并通知父窗口重算几何"""
+        self.content_widget.setMaximumHeight(16777215)
+        # 通知父窗口重算几何
+        parent_win = self.window()
+        if parent_win:
+            try:
+                parent_win.adjustSize()
+            except Exception:
+                pass
+        try:
+            self.toggle_animation.finished.disconnect(self._on_expand_finished)
+        except Exception:
+            pass
+
     def set_collapsed(self, collapsed: bool):
         """设置折叠状态"""
         if collapsed != self.is_collapsed:
-            self.toggle_button.setChecked(collapsed)
+            self.header_widget.setChecked(collapsed)
             self.toggle()

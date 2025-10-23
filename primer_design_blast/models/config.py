@@ -44,6 +44,12 @@ class AppConfig:
     PAGE_LOAD_TIMEOUT: int = 30
     ELEMENT_WAIT_TIMEOUT: int = 20
     
+    # UI颜色配置
+    COLOR_BASE: str = "#f3f4f6"  # 基础背景色
+    COLOR_ACCENT: str = "#4f46e5"  # 强调色/主按钮
+    COLOR_ACCENT_HOVER: str = "#4338ca"  # 强调色悬停
+    COLOR_ACCENT_PRESSED: str = "#3730a3"  # 强调色按下
+    
     def __post_init__(self):
         """初始化后处理"""
         if self.CHR_MAPPING_HG19 is None:

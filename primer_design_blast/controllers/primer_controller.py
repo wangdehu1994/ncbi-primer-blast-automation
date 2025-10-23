@@ -158,21 +158,21 @@ class PrimerController(QObject):
                 return
             
             # 打开页面并验证元素
-            self.progress_updated.emit("正在打开Primer-BLAST页面...", "🌐")
+            self.progress_updated.emit("正在打开Primer-BLAST页面...")
             self.web_service.open_primer_blast()
             
             # 自动验证页面元素
-            self.progress_updated.emit("正在验证网页元素...", "🔍")
+            self.progress_updated.emit("正在验证网页元素...")
             try:
                 if self.web_service.page and hasattr(self.web_service.page, 'validate_page_elements'):
                     validation_success = self.web_service.page.validate_page_elements()
                     if validation_success:
-                        self.progress_updated.emit("✓ 网页元素验证通过", "✅")
+                        self.progress_updated.emit("✓ 网页元素验证通过")
                     else:
-                        self.progress_updated.emit("⚠ 部分元素定位异常,将使用备用策略", "⚠️")
+                        self.progress_updated.emit("⚠ 部分元素定位异常,将使用备用策略")
             except Exception as e:
                 self.logger.warning(f"页面验证失败: {e}")
-                self.progress_updated.emit("⚠ 页面验证出错,继续执行", "⚠️")
+                self.progress_updated.emit("⚠ 页面验证出错,继续执行")
             
             # 处理每个坐标
             self.progress_updated.emit(

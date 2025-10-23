@@ -9,161 +9,92 @@ from PyQt5.QtCore import Qt
 
 
 class CustomMessageBox:
-    """自定义消息框类"""
+    """自定义消息框类，提供统一的工业风格"""
     
     @staticmethod
-    def show_info(parent, title: str, message: str, details: str = None) -> int:
-        """显示信息消息"""
+    def _create_base_box(parent, icon: QMessageBox.Icon, title: str, message: str, details: str = None):
         msg = QMessageBox(parent)
-        msg.setIcon(QMessageBox.Information)
+        msg.setIcon(icon)
         msg.setWindowTitle(title)
         msg.setText(f"<b>{message}</b>")
         if details:
             msg.setDetailedText(details)
-        msg.setStandardButtons(QMessageBox.Ok)
+        
         msg.setStyleSheet("""
             QMessageBox {
-                background-color: #f4f6f8;
-                min-width: 380px;
-                border: 1px solid #d5d9df;
+                background-color: #f3f4f6;
+                border: 1px solid #e5e7eb;
+                min-width: 350px;
+            }
+            QMessageBox QLabel#qt_msgbox_label { /* 标题文本 */
+                color: #111827;
+                font-size: 10pt;
+            }
+            QMessageBox QLabel#qt_msgbox_informativetext { /* 详细信息 */
+                color: #4b5563;
             }
             QMessageBox QPushButton {
-                background-color: #365f9c;
+                background-color: #4f46e5;
                 color: #ffffff;
                 border: none;
-                padding: 8px 20px;
                 border-radius: 4px;
+                padding: 7px 20px;
                 font-weight: 600;
-                min-width: 90px;
+                min-width: 80px;
             }
             QMessageBox QPushButton:hover {
-                background-color: #2d527f;
+                background-color: #4338ca;
+            }
+            QMessageBox QPushButton:pressed {
+                background-color: #3730a3;
+            }
+            /* 特定按钮样式 */
+            QMessageBox QPushButton[text="No"],
+            QMessageBox QPushButton[text="Cancel"] {
+                background-color: #ffffff;
+                color: #374151;
+                border: 1px solid #d1d5db;
+            }
+            QMessageBox QPushButton[text="No"]:hover,
+            QMessageBox QPushButton[text="Cancel"]:hover {
+                background-color: #f9fafb;
             }
         """)
+        return msg
+
+    @staticmethod
+    def show_info(parent, title: str, message: str, details: str = None) -> int:
+        """显示信息消息"""
+        msg = CustomMessageBox._create_base_box(parent, QMessageBox.Information, title, message, details)
+        msg.setStandardButtons(QMessageBox.Ok)
         return msg.exec_()
     
     @staticmethod
     def show_warning(parent, title: str, message: str, details: str = None) -> int:
         """显示警告消息"""
-        msg = QMessageBox(parent)
-        msg.setIcon(QMessageBox.Warning)
-        msg.setWindowTitle(title)
-        msg.setText(f"<b>{message}</b>")
-        if details:
-            msg.setInformativeText(details)
+        msg = CustomMessageBox._create_base_box(parent, QMessageBox.Warning, title, message, details)
         msg.setStandardButtons(QMessageBox.Ok)
-        msg.setStyleSheet("""
-            QMessageBox {
-                background-color: #fdf8f3;
-                min-width: 380px;
-                border: 1px solid #e6d8c7;
-            }
-            QMessageBox QPushButton {
-                background-color: #b4690e;
-                color: #ffffff;
-                border: none;
-                padding: 8px 20px;
-                border-radius: 4px;
-                font-weight: 600;
-                min-width: 90px;
-            }
-            QMessageBox QPushButton:hover {
-                background-color: #98540b;
-            }
-        """)
         return msg.exec_()
     
     @staticmethod
     def show_error(parent, title: str, message: str, details: str = None) -> int:
         """显示错误消息"""
-        msg = QMessageBox(parent)
-        msg.setIcon(QMessageBox.Critical)
-        msg.setWindowTitle(title)
-        msg.setText(f"<b>{message}</b>")
-        if details:
-            msg.setInformativeText(details)
+        msg = CustomMessageBox._create_base_box(parent, QMessageBox.Critical, title, message, details)
         msg.setStandardButtons(QMessageBox.Ok)
-        msg.setStyleSheet("""
-            QMessageBox {
-                background-color: #fdf4f4;
-                min-width: 380px;
-                border: 1px solid #ebc8c8;
-            }
-            QMessageBox QPushButton {
-                background-color: #b42318;
-                color: #ffffff;
-                border: none;
-                padding: 8px 20px;
-                border-radius: 4px;
-                font-weight: 600;
-                min-width: 90px;
-            }
-            QMessageBox QPushButton:hover {
-                background-color: #8d1c13;
-            }
-        """)
         return msg.exec_()
     
     @staticmethod
     def show_success(parent, title: str, message: str, details: str = None) -> int:
         """显示成功消息"""
-        msg = QMessageBox(parent)
-        msg.setIcon(QMessageBox.Information)
-        msg.setWindowTitle(title)
-        msg.setText(f"<b>{message}</b>")
-        if details:
-            msg.setInformativeText(details)
+        # QMessageBox没有内置的Success图标，使用Information替代
+        msg = CustomMessageBox._create_base_box(parent, QMessageBox.Information, title, message, details)
         msg.setStandardButtons(QMessageBox.Ok)
-        msg.setStyleSheet("""
-            QMessageBox {
-                background-color: #f3faf3;
-                min-width: 380px;
-                border: 1px solid #d2e6d2;
-            }
-            QMessageBox QPushButton {
-                background-color: #2f7d3c;
-                color: #ffffff;
-                border: none;
-                padding: 8px 20px;
-                border-radius: 4px;
-                font-weight: 600;
-                min-width: 90px;
-            }
-            QMessageBox QPushButton:hover {
-                background-color: #276a32;
-            }
-        """)
         return msg.exec_()
     
     @staticmethod
     def show_question(parent, title: str, message: str, details: str = None) -> int:
         """显示询问消息"""
-        msg = QMessageBox(parent)
-        msg.setIcon(QMessageBox.Question)
-        msg.setWindowTitle(title)
-        msg.setText(f"<b>{message}</b>")
-        if details:
-            msg.setInformativeText(details)
+        msg = CustomMessageBox._create_base_box(parent, QMessageBox.Question, title, message, details)
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         msg.setDefaultButton(QMessageBox.Yes)
-        msg.setStyleSheet("""
-            QMessageBox {
-                background-color: #f4f5f7;
-                min-width: 380px;
-                border: 1px solid #d5d9df;
-            }
-            QMessageBox QPushButton {
-                background-color: #3f4c5d;
-                color: #ffffff;
-                border: none;
-                padding: 8px 20px;
-                border-radius: 4px;
-                font-weight: 600;
-                min-width: 90px;
-                margin: 2px;
-            }
-            QMessageBox QPushButton:hover {
-                background-color: #353f4d;
-            }
-        """)
         return msg.exec_()
