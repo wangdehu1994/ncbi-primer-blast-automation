@@ -1,0 +1,14 @@
+# Python 依赖包
+# 引物设计套件 v3.0
+
+# 核心依赖
+PyQt5>=5.15.0
+selenium>=4.0.0
+pydantic>=1.10.0
+pyliftover>=0.4
+
+# 可选依赖（用于开发和打包）
+pyinstaller>=5.0.0  # 打包工具
+black>=22.0.0        # 代码格式化
+pytest>=7.0.0        # 单元测试
+mypy>=0.991          # 类型检查

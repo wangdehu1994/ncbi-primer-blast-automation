@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+primer_env/
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+primer_design_blast/logs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# User data and templates
+primer_design_blast/user_templates/
+~/.primer_design_suite/
+
+# Temporary files
+*.tmp
+*.bak
+temp_*.txt
+
+# 资源文件 - 只保留文件夹结构
+# 浏览器驱动（大文件，留在本地）
+primer_design_blast/resources/drivers/win10/*.exe
+primer_design_blast/resources/drivers/win7/*.exe
+
+# 坐标转换文件（大文件）
+primer_design_blast/resources/hg19ToHg38/*.chain
+
+# 应用图标（二进制文件）
+primer_design_blast/resources/*.ico
+
+# 不需要的文件夹
+历史版本/
+离线引物设计/
+driver_win10/
+driver_win7/
+hg19ToHg38/
+release/
+
+# 其他不需要的文件
+web_primer_design_tool_*.py
+引物设计*.txt
+坐标转换示例.txt
+build.bat
+prepare_files.bat
+*.spec
+version_info.txt
+setup_environment.bat
+icon.ico
