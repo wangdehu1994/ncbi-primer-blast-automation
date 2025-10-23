@@ -30,11 +30,11 @@ class BrowserInfo:
 class DriverUpdater:
     """浏览器驱动更新器"""
     
-    # Edge 驱动下载 API
-    EDGE_DRIVER_API = "https://msedgedriver.azureedge.net"
+    # Edge 驱动下载 API（新地址）
+    EDGE_DRIVER_API = "https://msedgedriver.microsoft.com"
     
-    # Chrome 驱动下载 API
-    CHROME_DRIVER_API = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json"
+    # Chrome 驱动下载 API（使用 milestone API）
+    CHROME_DRIVER_API = "https://googlechromelabs.github.io/chrome-for-testing/latest-versions-per-milestone-with-downloads.json"
     CHROME_DRIVER_DOWNLOAD = "https://storage.googleapis.com/chrome-for-testing-public"
     
     def __init__(self):
@@ -187,8 +187,8 @@ class DriverUpdater:
             驱动下载 URL
         """
         try:
-            # 获取主版本号（前三位）
-            major_version = '.'.join(version.split('.')[:3])
+            # 获取主版本号（milestone，只取第一位）
+            milestone = version.split('.')[0]
             
             # 查询可用版本
             response = requests.get(self.CHROME_DRIVER_API, timeout=10)
@@ -198,19 +198,23 @@ class DriverUpdater:
             
             data = response.json()
             
-            # 查找匹配版本
-            for version_info in reversed(data.get('versions', [])):
-                ver = version_info.get('version', '')
-                if ver.startswith(major_version):
-                    # 找到匹配版本，获取 Windows 驱动下载链接
-                    downloads = version_info.get('downloads', {}).get('chromedriver', [])
-                    for download in downloads:
-                        if download.get('platform') == 'win64':
-                            url = download.get('url')
-                            self.logger.info(f"找到 Chrome 驱动: {url}")
-                            return url
+            # 查找对应 milestone 的版本
+            milestones = data.get('milestones', {})
+            if milestone not in milestones:
+                self.logger.warning(f"未找到 milestone {milestone} 的驱动")
+                return None
             
-            self.logger.warning(f"未找到匹配的 Chrome 驱动版本: {major_version}")
+            milestone_data = milestones[milestone]
+            downloads = milestone_data.get('downloads', {}).get('chromedriver', [])
+            
+            # 查找 win64 平台的下载链接
+            for download in downloads:
+                if download.get('platform') == 'win64':
+                    url = download.get('url')
+                    self.logger.info(f"找到 Chrome 驱动: {url}")
+                    return url
+            
+            self.logger.warning(f"未找到 win64 平台的 Chrome 驱动")
             return None
             
         except Exception as e:
