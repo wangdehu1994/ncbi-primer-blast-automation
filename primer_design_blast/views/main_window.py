@@ -27,6 +27,7 @@ from ..utils.resource_utils import get_resource_path
 from .components.message_box import CustomMessageBox
 from .components.template_dialog import TemplateDialog
 from .components.settings_dialog import SettingsDialog
+from .components.driver_update_dialog import DriverUpdateDialog
 
 
 class WorkerThread(QThread):
@@ -708,11 +709,16 @@ class MainWindow(QMainWindow):
     
     def update_driver(self):
         """更新驱动"""
-        CustomMessageBox.show_info(
-            self,
-            "驱动更新",
-            "此功能正在开发中...\n\n请手动下载对应的浏览器驱动程序"
-        )
+        try:
+            dialog = DriverUpdateDialog(self)
+            dialog.exec_()
+        except Exception as e:
+            self.logger.error(f"打开驱动更新对话框失败: {e}", exc_info=True)
+            CustomMessageBox.show_error(
+                self,
+                "错误",
+                f"无法打开驱动更新对话框:\n{str(e)}"
+            )
     
     def open_settings(self):
         """打开设置"""
