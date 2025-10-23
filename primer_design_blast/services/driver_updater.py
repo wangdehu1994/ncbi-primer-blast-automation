@@ -278,17 +278,22 @@ class DriverUpdater:
                     if member.endswith('.exe'):
                         # 提取到目标目录，使用正确的文件名
                         filename = os.path.basename(member)
-                        source = zip_ref.open(member)
                         target = os.path.join(save_dir, filename)
                         
-                        with open(target, 'wb') as f:
-                            f.write(source.read())
+                        # 正确关闭文件对象
+                        with zip_ref.open(member) as source:
+                            with open(target, 'wb') as f:
+                                f.write(source.read())
                         
                         self.logger.info(f"已提取: {target}")
             
-            # 删除临时文件
-            os.remove(temp_file)
-            self.logger.info("驱动更新完成")
+            # 删除临时文件（确保 zip 文件已完全关闭）
+            try:
+                os.remove(temp_file)
+                self.logger.info("驱动更新完成")
+            except Exception as e:
+                self.logger.warning(f"无法删除临时文件 {temp_file}: {e}")
+            
             return True
             
         except Exception as e:
