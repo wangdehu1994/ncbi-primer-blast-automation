@@ -40,7 +40,7 @@ class PrimerController(QObject):
     """引物设计控制器"""
     
     # 信号定义
-    progress_updated = pyqtSignal(str, str)  # (message, emoji)
+    progress_updated = pyqtSignal(str)  # 进度文案
     stats_updated = pyqtSignal(ProcessingStats)  # 统计信息更新
     task_started = pyqtSignal()
     task_completed = pyqtSignal(ProcessingStats)
@@ -126,7 +126,7 @@ class PrimerController(QObject):
             
             # 预验证坐标
             if not skip_validation:
-                self.progress_updated.emit("正在验证输入坐标...", "🔍")
+                self.progress_updated.emit("正在验证输入坐标...")
                 valid_results, invalid_results = self.validate_input(input_text, genome_version)
                 
                 if invalid_results:
@@ -148,7 +148,7 @@ class PrimerController(QObject):
             self.stats_updated.emit(self.stats)
             
             # 启动浏览器
-            self.progress_updated.emit(f"正在启动 {browser} 浏览器...", "🌐")
+            self.progress_updated.emit(f"正在启动 {browser} 浏览器...")
             if not self.web_service.setup_driver(browser):
                 self.error_occurred.emit(
                     "浏览器启动失败",
@@ -159,13 +159,12 @@ class PrimerController(QObject):
             
             # 处理每个坐标
             self.progress_updated.emit(
-                f"开始处理 {self.stats.total} 组数据", 
-                "🚀"
+                f"开始处理 {self.stats.total} 组数据"
             )
             
             for result in valid_results:
                 if self.should_stop:
-                    self.progress_updated.emit("用户取消操作", "🛑")
+                    self.progress_updated.emit("用户取消操作")
                     self.task_stopped.emit()
                     break
                 
@@ -184,7 +183,7 @@ class PrimerController(QObject):
             
             # 完成
             if not self.should_stop:
-                self.progress_updated.emit("所有任务处理完成!", "🎉")
+                self.progress_updated.emit("所有任务处理完成!")
                 self.task_completed.emit(self.stats)
         
         except Exception as e:
@@ -228,8 +227,7 @@ class PrimerController(QObject):
         """处理单个坐标"""
         try:
             self.progress_updated.emit(
-                f"[{result.line_number}] 处理: {result.chromosome}:{result.position}",
-                "📍"
+                f"[{result.line_number}] 处理: {result.chromosome}:{result.position}"
             )
             
             chrom = result.chromosome
@@ -237,17 +235,16 @@ class PrimerController(QObject):
             
             # 坐标转换
             if genome_version == "hg19/GRCh37":
-                self.progress_updated.emit("正在转换 hg19 → hg38...", "🔄")
+                self.progress_updated.emit("正在转换 hg19 → hg38...")
                 chrom, pos, error = self.coord_service.convert_hg19_to_hg38(chrom, pos)
                 
                 if error:
-                    self.progress_updated.emit(f"坐标转换失败: {error}", "❌")
+                    self.progress_updated.emit(f"坐标转换失败: {error}")
                     self.stats.failed += 1
                     return
                 
                 self.progress_updated.emit(
-                    f"转换成功: {result.chromosome}:{result.position} → {chrom}:{pos}",
-                    "✅"
+                    f"转换成功: {result.chromosome}:{result.position} → {chrom}:{pos}"
                 )
                 genome_version = "hg38/GRCh38"
             
@@ -255,16 +252,15 @@ class PrimerController(QObject):
             accession = self.coord_service.get_accession(chrom, genome_version)
             if not accession:
                 self.progress_updated.emit(
-                    f"无法获取 {chrom} 的Accession编号",
-                    "❌"
+                    f"无法获取 {chrom} 的Accession编号"
                 )
                 self.stats.failed += 1
                 return
             
-            self.progress_updated.emit(f"Accession: {accession}", "🔍")
+            self.progress_updated.emit(f"Accession: {accession}")
             
             # 提交到Primer-BLAST
-            self.progress_updated.emit("正在提交到 Primer-BLAST...", "🧬")
+            self.progress_updated.emit("正在提交到 Primer-BLAST...")
             success, error = self.web_service.submit_primer_design(
                 accession,
                 pos,
@@ -273,29 +269,27 @@ class PrimerController(QObject):
             
             if success:
                 self.progress_updated.emit(
-                    f"[{result.line_number}] 处理成功",
-                    "✅"
+                    f"[{result.line_number}] 处理成功"
                 )
                 self.stats.success += 1
             else:
                 self.progress_updated.emit(
-                    f"[{result.line_number}] 处理失败: {error}",
-                    "❌"
+                    f"[{result.line_number}] 处理失败: {error}"
                 )
                 self.stats.failed += 1
         
         except Exception as e:
             self.logger.error(f"处理坐标时出错: {e}", exc_info=True)
-            self.progress_updated.emit(f"处理出错: {str(e)}", "❌")
+            self.progress_updated.emit(f"处理出错: {str(e)}")
             self.stats.failed += 1
     
     def stop_processing(self):
         """停止处理"""
         if self.is_running:
             self.should_stop = True
-            self.progress_updated.emit("正在停止任务...", "⏸️")
+            self.progress_updated.emit("正在停止任务...")
     
     def close_browser(self):
         """关闭浏览器"""
         self.web_service.close_driver()
-        self.progress_updated.emit("浏览器已关闭", "🔴")
+        self.progress_updated.emit("浏览器已关闭")

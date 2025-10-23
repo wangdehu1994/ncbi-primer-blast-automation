@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (
     QInputDialog, QDialog, QDialogButtonBox, QTextEdit, QGraphicsDropShadowEffect
 )
 from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, pyqtSlot, QThread, pyqtSignal
-from PyQt5.QtGui import QIcon, QFont
+from PyQt5.QtGui import QIcon, QColor, QTextCursor
 
 from ..models.primer_params import PrimerParams
 from ..models.config import AppConfig, TemplateManager
@@ -100,90 +100,94 @@ class MainWindow(QMainWindow):
         menubar = self.menuBar()
         
         # 文件菜单
-        file_menu = menubar.addMenu("📁 文件(&F)")
-        
-        import_action = QAction("📂 导入坐标文件...", self)
+        file_menu = menubar.addMenu("文件(&F)")
+
+        import_action = QAction("导入坐标文件...", self)
         import_action.setShortcut("Ctrl+O")
         import_action.triggered.connect(self.import_coordinates)
         file_menu.addAction(import_action)
-        
-        export_action = QAction("💾 导出当前坐标...", self)
+
+        export_action = QAction("导出当前坐标...", self)
         export_action.setShortcut("Ctrl+S")
         export_action.triggered.connect(self.export_coordinates)
         file_menu.addAction(export_action)
-        
+
         file_menu.addSeparator()
-        
-        exit_action = QAction("🚪 退出", self)
+
+        exit_action = QAction("退出", self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
-        
+
         # 编辑菜单
-        edit_menu = menubar.addMenu("✏️ 编辑(&E)")
-        
-        clear_action = QAction("🗑️ 清空输入", self)
+        edit_menu = menubar.addMenu("编辑(&E)")
+
+        clear_action = QAction("清空输入", self)
         clear_action.setShortcut("Ctrl+D")
         clear_action.triggered.connect(self.clear_input)
         edit_menu.addAction(clear_action)
-        
-        validate_action = QAction("✅ 验证坐标", self)
+
+        validate_action = QAction("验证坐标", self)
         validate_action.setShortcut("Ctrl+V")
         validate_action.triggered.connect(self.validate_coordinates)
         edit_menu.addAction(validate_action)
-        
+
         # 模板菜单
-        template_menu = menubar.addMenu("📋 模板(&T)")
-        
-        save_template_action = QAction("💾 保存当前参数为模板...", self)
+        template_menu = menubar.addMenu("模板(&T)")
+
+        save_template_action = QAction("保存当前参数为模板...", self)
         save_template_action.triggered.connect(self.save_template)
         template_menu.addAction(save_template_action)
-        
-        load_template_action = QAction("📂 加载参数模板...", self)
+
+        load_template_action = QAction("加载参数模板...", self)
         load_template_action.triggered.connect(self.load_template)
         template_menu.addAction(load_template_action)
-        
-        manage_template_action = QAction("⚙️ 管理模板...", self)
+
+        manage_template_action = QAction("管理模板...", self)
         manage_template_action.triggered.connect(self.manage_templates)
         template_menu.addAction(manage_template_action)
-        
+
         # 工具菜单
-        tools_menu = menubar.addMenu("🔧 工具(&T)")
-        
-        driver_update_action = QAction("🔄 更新浏览器驱动...", self)
+        tools_menu = menubar.addMenu("工具(&T)")
+
+        driver_update_action = QAction("更新浏览器驱动...", self)
         driver_update_action.triggered.connect(self.update_driver)
         tools_menu.addAction(driver_update_action)
-        
-        settings_action = QAction("⚙️ 设置...", self)
+
+        settings_action = QAction("设置...", self)
         settings_action.setShortcut("Ctrl+,")
         settings_action.triggered.connect(self.open_settings)
         tools_menu.addAction(settings_action)
-        
+
         tools_menu.addSeparator()
-        
-        close_browser_action = QAction("🔴 关闭浏览器", self)
+
+        close_browser_action = QAction("关闭浏览器", self)
         close_browser_action.triggered.connect(self.close_browser)
         tools_menu.addAction(close_browser_action)
-        
+
         # 帮助菜单
-        help_menu = menubar.addMenu("❓ 帮助(&H)")
-        
-        usage_action = QAction("📖 使用说明", self)
+        help_menu = menubar.addMenu("帮助(&H)")
+
+        usage_action = QAction("使用说明", self)
         usage_action.setShortcut("F1")
         usage_action.triggered.connect(self.show_usage)
         help_menu.addAction(usage_action)
-        
-        about_action = QAction("ℹ️ 关于", self)
+
+        about_action = QAction("关于", self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
     
     def create_input_area(self) -> QGroupBox:
         """创建输入区域"""
-        group = QGroupBox("📝 批量基因组坐标输入")
+        group = QGroupBox("批量基因组坐标输入")
         self.add_shadow(group)
-        
+
         layout = QFormLayout()
-        
+        layout.setLabelAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        layout.setFormAlignment(Qt.AlignLeft | Qt.AlignTop)
+        layout.setHorizontalSpacing(14)
+        layout.setVerticalSpacing(12)
+
         # 多行输入
         self.input_text = QPlainTextEdit()
         self.input_text.setPlaceholderText(
@@ -195,16 +199,19 @@ class MainWindow(QMainWindow):
             "支持 1-24 号染色体及 X、Y 染色体"
         )
         self.input_text.setMaximumHeight(150)
-        layout.addRow("坐标数据:", self.input_text)
+        self.input_text.setLineWrapMode(QPlainTextEdit.NoWrap)
+        layout.addRow("坐标内容:", self.input_text)
         
         # 基因组版本
         self.version_combo = QComboBox()
         self.version_combo.addItems(["hg38/GRCh38", "hg19/GRCh37"])
+        self.version_combo.setMinimumWidth(160)
         layout.addRow("基因组版本:", self.version_combo)
-        
+
         # 浏览器选择
         self.browser_combo = QComboBox()
         self.browser_combo.addItems(["Edge", "Chrome"])
+        self.browser_combo.setMinimumWidth(160)
         layout.addRow("浏览器:", self.browser_combo)
         
         group.setLayout(layout)
@@ -212,11 +219,12 @@ class MainWindow(QMainWindow):
     
     def create_parameter_area(self) -> QGroupBox:
         """创建参数设置区域"""
-        self.param_group = QGroupBox("⚙️ 引物参数设置")
+        self.param_group = QGroupBox("引物参数设置")
         self.add_shadow(self.param_group)
-        
+
         layout = QVBoxLayout()
-        layout.setSpacing(10)
+        layout.setSpacing(12)
+        layout.setContentsMargins(12, 12, 12, 12)
         
         # PCR产物大小
         pcr_layout = QHBoxLayout()
@@ -278,6 +286,8 @@ class MainWindow(QMainWindow):
         
         # 其他参数（以后可以收起的高级参数）
         other_layout = QFormLayout()
+        other_layout.setHorizontalSpacing(14)
+        other_layout.setVerticalSpacing(10)
         self.primer_num_input = QLineEdit("10")
         self.primer_num_input.setMaximumWidth(100)
         other_layout.addRow("返回引物数:", self.primer_num_input)
@@ -306,11 +316,13 @@ class MainWindow(QMainWindow):
     
     def create_progress_area(self) -> QGroupBox:
         """创建进度显示区域"""
-        group = QGroupBox("📊 运行进度")
+        group = QGroupBox("运行进度")
         self.add_shadow(group)
-        
+
         layout = QVBoxLayout()
-        
+        layout.setSpacing(12)
+        layout.setContentsMargins(12, 12, 12, 12)
+
         # 进度条
         self.progress_bar = QProgressBar()
         self.progress_bar.setFormat("%p% (%v/%m)")
@@ -319,7 +331,7 @@ class MainWindow(QMainWindow):
         # 统计信息标签
         stats_layout = QHBoxLayout()
         self.stats_label = QLabel("就绪")
-        self.stats_label.setStyleSheet("color: #666; font-weight: bold;")
+        self.stats_label.setStyleSheet("color: #4b5563; font-weight: 600;")
         stats_layout.addWidget(self.stats_label)
         stats_layout.addStretch()
         layout.addLayout(stats_layout)
@@ -331,12 +343,14 @@ class MainWindow(QMainWindow):
         self.progress_display.setStyleSheet("""
             QPlainTextEdit {
                 font-family: 'Consolas', 'Monaco', monospace;
-                font-size: 10px;
-                background-color: #2b2b2b;
-                color: #d4d4d4;
-                border: 1px solid #555;
+                font-size: 11px;
+                background-color: #f6f7f9;
+                color: #1f2937;
+                border: 1px solid #cfd5de;
             }
         """)
+        self.progress_display.setLineWrapMode(QPlainTextEdit.NoWrap)
+        self.progress_display.setMaximumBlockCount(500)
         layout.addWidget(self.progress_display)
         
         group.setLayout(layout)
@@ -348,42 +362,58 @@ class MainWindow(QMainWindow):
         layout.setSpacing(15)
         
         # 开始按钮
-        self.start_button = QPushButton("🚀 开始设计引物")
+        self.start_button = QPushButton("开始设计引物")
         self.start_button.setMinimumHeight(40)
         self.start_button.setStyleSheet("""
             QPushButton {
-                background-color: #27ae60;
-                color: white;
+                background-color: #2f6fed;
+                color: #ffffff;
                 font-size: 14px;
-                font-weight: bold;
+                font-weight: 600;
                 border-radius: 6px;
+                padding: 6px 18px;
+                border: 1px solid #2559c2;
             }
             QPushButton:hover {
-                background-color: #229954;
+                background-color: #2559c2;
+                border: 1px solid #1f4aa3;
+            }
+            QPushButton:pressed {
+                background-color: #1f4aa3;
             }
             QPushButton:disabled {
-                background-color: #95a5a6;
+                background-color: #d6dce5;
+                color: #8b95a3;
+                border: 1px solid #c7ced8;
             }
         """)
         self.start_button.clicked.connect(self.start_processing)
         
         # 停止按钮
-        self.stop_button = QPushButton("⏹️ 停止处理")
+        self.stop_button = QPushButton("停止处理")
         self.stop_button.setMinimumHeight(40)
         self.stop_button.setEnabled(False)
         self.stop_button.setStyleSheet("""
             QPushButton {
-                background-color: #e74c3c;
-                color: white;
+                background-color: #c53f32;
+                color: #ffffff;
                 font-size: 14px;
-                font-weight: bold;
+                font-weight: 600;
                 border-radius: 6px;
+                padding: 6px 18px;
+                border: 1px solid #a4362b;
             }
             QPushButton:hover {
-                background-color: #c0392b;
+                background-color: #a4362b;
+                border: 1px solid #8c2f26;
+            }
+            QPushButton:pressed {
+                background-color: #8c2f26;
             }
             QPushButton:disabled {
-                background-color: #95a5a6;
+                background-color: #d6dce5;
+                color: #8b95a3;
+                border: 1px solid #c7ced8;
             }
         """)
         self.stop_button.clicked.connect(self.stop_processing)
@@ -396,44 +426,102 @@ class MainWindow(QMainWindow):
     def add_shadow(self, widget):
         """添加阴影效果"""
         shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(15)
-        shadow.setOffset(0, 2)
-        shadow.setColor(Qt.gray)
+        shadow.setBlurRadius(14)
+        shadow.setOffset(0, 3)
+        shadow.setColor(QColor(32, 45, 64, 40))
         widget.setGraphicsEffect(shadow)
     
     def apply_styles(self):
         """应用全局样式"""
         self.setStyleSheet("""
             QMainWindow {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #f6f9ff, stop:1 #eef2ff);
+                background-color: #f4f5f7;
+            }
+            QWidget {
+                font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                color: #1f2933;
+            }
+            QMenuBar {
+                background-color: #f8f9fb;
+                border-bottom: 1px solid #d1d7e0;
+            }
+            QMenuBar::item {
+                spacing: 6px;
+                padding: 4px 12px;
+                background: transparent;
+            }
+            QMenuBar::item:selected {
+                background: #e4e8ef;
+            }
+            QMenu {
+                background-color: #ffffff;
+                border: 1px solid #d1d7e0;
+            }
+            QMenu::item:selected {
+                background-color: #e4e8ef;
             }
             QGroupBox {
                 font-size: 13px;
-                font-weight: bold;
-                border: 2px solid #dcdcdc;
-                border-radius: 8px;
+                font-weight: 600;
+                border: 1px solid #d1d7e0;
+                border-radius: 10px;
                 margin-top: 12px;
-                padding-top: 15px;
-                background-color: white;
+                padding-top: 18px;
+                background-color: #ffffff;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
-                left: 12px;
-                padding: 0 8px;
+                left: 16px;
+                padding: 0 6px;
+                color: #4b5563;
             }
             QLabel {
-                font-size: 11px;
-                color: #333;
+                font-size: 12px;
+                color: #3f4c5d;
             }
             QLineEdit, QComboBox, QPlainTextEdit {
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                padding: 5px;
-                background-color: white;
+                border: 1px solid #c3cad4;
+                border-radius: 6px;
+                padding: 6px;
+                background-color: #f9fafb;
+                color: #1f2933;
+                selection-background-color: #b9cdf0;
+                selection-color: #0f172a;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #ffffff;
+                border: 1px solid #c3cad4;
+                selection-background-color: #e4e8ef;
             }
             QLineEdit:focus, QPlainTextEdit:focus {
-                border: 2px solid #3498db;
+                border: 1px solid #365f9c;
+            }
+            QProgressBar {
+                background-color: #edf0f4;
+                border: 1px solid #d1d7e0;
+                border-radius: 6px;
+                color: #1f2933;
+                text-align: center;
+            }
+            QProgressBar::chunk {
+                background-color: #365f9c;
+                border-radius: 6px;
+            }
+            QScrollBar:vertical {
+                background: #e6e9ee;
+                width: 12px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #c4cad3;
+                min-height: 20px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #aab2be;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
             }
         """)
     
@@ -532,12 +620,16 @@ class MainWindow(QMainWindow):
         """停止处理"""
         self.controller.stop_processing()
     
-    @pyqtSlot(str, str)
-    def on_progress_updated(self, message: str, emoji: str):
+    @pyqtSlot(str)
+    def on_progress_updated(self, message: str):
         """进度更新"""
         from datetime import datetime
         timestamp = datetime.now().strftime("%H:%M:%S")
-        self.progress_display.appendPlainText(f"[{timestamp}] {emoji} {message}")
+        self.progress_display.appendPlainText(f"[{timestamp}] {message}")
+        cursor = self.progress_display.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        self.progress_display.setTextCursor(cursor)
+        self.progress_display.ensureCursorVisible()
     
     @pyqtSlot(ProcessingStats)
     def on_stats_updated(self, stats: ProcessingStats):
@@ -598,7 +690,7 @@ class MainWindow(QMainWindow):
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
                 self.input_text.setPlainText(content)
-                self.on_progress_updated(f"已导入: {file_path}", "📂")
+                self.on_progress_updated(f"已导入: {file_path}")
             except Exception as e:
                 CustomMessageBox.show_error(self, "导入失败", str(e))
     
@@ -620,7 +712,7 @@ class MainWindow(QMainWindow):
             try:
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(content)
-                self.on_progress_updated(f"已导出: {file_path}", "💾")
+                self.on_progress_updated(f"已导出: {file_path}")
             except Exception as e:
                 CustomMessageBox.show_error(self, "导出失败", str(e))
     
@@ -695,7 +787,7 @@ class MainWindow(QMainWindow):
             params = self.template_manager.load_template(name)
             if params:
                 self.set_params(params)
-                self.on_progress_updated(f"已加载模板: {name}", "📋")
+                self.on_progress_updated(f"已加载模板: {name}")
             else:
                 CustomMessageBox.show_error(self, "加载失败", "无法加载模板")
     
