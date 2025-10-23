@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-引物设计套件 - 启动入口
+引物设计工具 - 启动入口
 Run: python run.py
 """
-
 import sys
 import os
 

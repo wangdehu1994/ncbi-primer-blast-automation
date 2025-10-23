@@ -15,10 +15,12 @@ from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QComboBox, QGroupBox, QFormLayout, QPlainTextEdit,
     QProgressBar, QMenuBar, QMenu, QAction, QFileDialog, QMessageBox,
-    QInputDialog, QDialog, QDialogButtonBox, QTextEdit, QGraphicsDropShadowEffect
+    QInputDialog, QDialog, QDialogButtonBox, QTextEdit, QGraphicsDropShadowEffect,
+    QSizePolicy
 )
 from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, pyqtSlot, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QColor, QTextCursor
+from PyQt5.QtGui import QIcon, QFont, QColor
 
 from ..models.primer_params import PrimerParams
 from ..models.config import AppConfig, TemplateManager
@@ -26,8 +28,8 @@ from ..controllers.primer_controller import PrimerController, ProcessingStats
 from ..utils.resource_utils import get_resource_path
 from .components.message_box import CustomMessageBox
 from .components.template_dialog import TemplateDialog
-from .components.settings_dialog import SettingsDialog
 from .components.driver_update_dialog import DriverUpdateDialog
+from .components.collapsible_box import CollapsibleBox
 
 
 class WorkerThread(QThread):
@@ -67,7 +69,10 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         """初始化UI"""
         self.setWindowTitle(f"{self.config.APP_NAME} v{self.config.APP_VERSION}")
-        self.setGeometry(100, 100, 900, 700)
+        # 初始大小
+        self.setGeometry(100, 100, 900, 750)
+        # 设置最小尺寸
+        self.setMinimumSize(850, 600)
         
         # 设置图标
         icon_path = get_resource_path("icon.ico")
@@ -193,10 +198,11 @@ class MainWindow(QMainWindow):
         self.input_text.setPlaceholderText(
             "请输入染色体坐标信息，每行一组\n\n"
             "格式示例：\n"
-            "chr1 123456\n"
+            "chr1 123456  (染色体号 + 空格 + 位点)\n"
             "chr2 234567\n"
             "X 345678\n\n"
-            "支持 1-24 号染色体及 X、Y 染色体"
+            "支持 1-22 号染色体及 X、Y 染色体\n"
+            "提示：可以粘贴多行数据，程序会自动批量处理"
         )
         self.input_text.setMaximumHeight(150)
         self.input_text.setLineWrapMode(QPlainTextEdit.NoWrap)
@@ -217,7 +223,7 @@ class MainWindow(QMainWindow):
         group.setLayout(layout)
         return group
     
-    def create_parameter_area(self) -> QGroupBox:
+    def create_parameter_area(self) -> CollapsibleBox:
         """创建参数设置区域"""
         self.param_group = QGroupBox("引物参数设置")
         self.add_shadow(self.param_group)
@@ -284,7 +290,7 @@ class MainWindow(QMainWindow):
         primer_layout.addStretch()
         layout.addLayout(primer_layout)
         
-        # 其他参数（以后可以收起的高级参数）
+        # 其他参数
         other_layout = QFormLayout()
         other_layout.setHorizontalSpacing(14)
         other_layout.setVerticalSpacing(10)
@@ -310,9 +316,92 @@ class MainWindow(QMainWindow):
         
         layout.addLayout(other_layout)
         
-        self.param_group.setLayout(layout)
-        self.param_group.setMaximumHeight(350)
-        return self.param_group
+        # 参数管理按钮
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(8)
+        
+        reset_btn = QPushButton("🔄 重置为默认")
+        reset_btn.setMaximumWidth(120)
+        reset_btn.clicked.connect(self.reset_to_default_params)
+        reset_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f0f2f5;
+                color: #4f5d6d;
+                font-size: 11px;
+                border-radius: 4px;
+                padding: 4px 8px;
+                border: 1px solid #d0d7de;
+            }
+            QPushButton:hover {
+                background-color: #e7eaef;
+            }
+        """)
+        
+        save_btn = QPushButton("💾 保存模板")
+        save_btn.setMaximumWidth(120)
+        save_btn.clicked.connect(self.save_template)
+        save_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f0f2f5;
+                color: #4f5d6d;
+                font-size: 11px;
+                border-radius: 4px;
+                padding: 4px 8px;
+                border: 1px solid #d0d7de;
+            }
+            QPushButton:hover {
+                background-color: #e7eaef;
+            }
+        """)
+        
+        load_btn = QPushButton("📂 加载模板")
+        load_btn.setMaximumWidth(120)
+        load_btn.clicked.connect(self.load_template)
+        load_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f0f2f5;
+                color: #4f5d6d;
+                font-size: 11px;
+                border-radius: 4px;
+                padding: 4px 8px;
+                border: 1px solid #d0d7de;
+            }
+            QPushButton:hover {
+                background-color: #e7eaef;
+            }
+        """)
+        
+        manage_btn = QPushButton("⚙️ 管理模板")
+        manage_btn.setMaximumWidth(120)
+        manage_btn.clicked.connect(self.manage_templates)
+        manage_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f0f2f5;
+                color: #4f5d6d;
+                font-size: 11px;
+                border-radius: 4px;
+                padding: 4px 8px;
+                border: 1px solid #d0d7de;
+            }
+            QPushButton:hover {
+                background-color: #e7eaef;
+            }
+        """)
+        
+        button_layout.addWidget(reset_btn)
+        button_layout.addWidget(save_btn)
+        button_layout.addWidget(load_btn)
+        button_layout.addWidget(manage_btn)
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+        
+        # 将内容添加到可折叠组件
+        self.param_collapsible.add_widget(param_content)
+        
+        # 连接折叠状态改变信号
+        self.param_collapsible.collapsed_changed.connect(self.on_param_collapsed_changed)
+        
+        return self.param_collapsible
     
     def create_progress_area(self) -> QGroupBox:
         """创建进度显示区域"""
@@ -537,8 +626,20 @@ class MainWindow(QMainWindow):
     def load_default_params(self):
         """加载默认参数"""
         try:
-            params = PrimerParams()  # 使用默认值
-            self.logger.info("已加载默认参数")
+            # 先尝试加载默认模板
+            default_template = self.template_manager.get_default_template()
+            if default_template:
+                params = self.template_manager.load_template(default_template)
+                if params:
+                    self.set_params(params)
+                    self.logger.info(f"已加载默认模板: {default_template}")
+                    self.on_progress_updated(f"已自动加载默认模板: {default_template}", "⭐")
+                    return
+            
+            # 如果没有默认模板,使用出厂默认值
+            params = PrimerParams()
+            self.set_params(params)
+            self.logger.info("已加载出厂默认参数")
         except Exception as e:
             self.logger.error(f"加载默认参数失败: {e}")
     
@@ -674,6 +775,32 @@ class MainWindow(QMainWindow):
         """错误发生"""
         CustomMessageBox.show_error(self, title, message)
     
+    def on_param_collapsed_changed(self, is_collapsed: bool):
+        """参数区域折叠状态改变"""
+        # 使用QTimer延迟调整,确保动画完成
+        from PyQt5.QtCore import QTimer
+        QTimer.singleShot(self.param_collapsible.animation_duration + 50, self.adjust_window_size)
+    
+    def adjust_window_size(self):
+        """根据内容调整窗口大小"""
+        try:
+            # 获取当前窗口大小
+            current_size = self.size()
+            
+            # 计算理想高度
+            ideal_height = self.centralWidget().sizeHint().height() + self.menuBar().height() + 50
+            
+            # 限制在合理范围内
+            min_height = 600
+            max_height = 900
+            new_height = max(min_height, min(ideal_height, max_height))
+            
+            # 平滑调整窗口大小
+            if abs(new_height - current_size.height()) > 50:  # 只在变化较大时调整
+                self.resize(current_size.width(), new_height)
+        except Exception as e:
+            self.logger.debug(f"调整窗口大小时出错: {e}")
+    
     # ========== 菜单操作 ==========
     
     def import_coordinates(self):
@@ -791,13 +918,38 @@ class MainWindow(QMainWindow):
             else:
                 CustomMessageBox.show_error(self, "加载失败", "无法加载模板")
     
+    def reset_to_default_params(self):
+        """重置为默认参数"""
+        reply = CustomMessageBox.show_question(
+            self,
+            "确认重置",
+            "确定要将参数重置为默认值吗？"
+        )
+        if reply == QMessageBox.Yes:
+            default_params = PrimerParams()  # 获取默认参数
+            self.set_params(default_params)
+            self.on_progress_updated("已重置为默认参数", "🔄")
+            CustomMessageBox.show_success(self, "重置成功", "参数已重置为默认值")
+    
     def manage_templates(self):
         """管理模板"""
-        CustomMessageBox.show_info(
-            self,
-            "模板管理",
-            "此功能正在开发中..."
-        )
+        try:
+            dialog = TemplateDialog(self.template_manager, self)
+            if dialog.exec_() == QDialog.Accepted:
+                # 如果用户在对话框中选择了模板,加载它
+                selected_template = dialog.get_selected_template()
+                if selected_template:
+                    params = self.template_manager.load_template(selected_template)
+                    if params:
+                        self.set_params(params)
+                        self.on_progress_updated(f"已加载模板: {selected_template}", "📋")
+        except Exception as e:
+            self.logger.error(f"打开模板管理对话框失败: {e}", exc_info=True)
+            CustomMessageBox.show_error(
+                self,
+                "错误",
+                f"无法打开模板管理对话框:\n{str(e)}"
+            )
     
     def update_driver(self):
         """更新驱动"""
@@ -812,13 +964,55 @@ class MainWindow(QMainWindow):
                 f"无法打开驱动更新对话框:\n{str(e)}"
             )
     
-    def open_settings(self):
-        """打开设置"""
-        CustomMessageBox.show_info(
-            self,
-            "设置",
-            "此功能正在开发中..."
-        )
+    def validate_page_elements(self):
+        """验证网页元素"""
+        try:
+            # 先检查浏览器是否已启动
+            if not self.controller.web_service.driver:
+                CustomMessageBox.show_info(
+                    self,
+                    "提示",
+                    "请先启动一次浏览器(开始设计引物)后再进行验证"
+                )
+                return
+            
+            # 确保在正确的页面
+            current_url = self.controller.web_service.driver.current_url
+            if "primer-blast" not in current_url.lower():
+                reply = CustomMessageBox.show_question(
+                    self,
+                    "需要打开页面",
+                    "当前不在Primer-BLAST页面,是否自动打开?"
+                )
+                if reply == QMessageBox.Yes:
+                    self.controller.web_service.open_primer_blast()
+                else:
+                    return
+            
+            # 执行验证
+            self.on_progress_updated("正在验证页面元素...", "🔍")
+            success = self.controller.web_service.page.validate_page_elements()
+            
+            if success:
+                CustomMessageBox.show_success(
+                    self,
+                    "验证通过",
+                    "所有关键页面元素都能正常定位,网站未发生重大变更"
+                )
+            else:
+                CustomMessageBox.show_warning(
+                    self,
+                    "验证失败",
+                    "部分关键元素无法定位,网站可能已更新。\n"
+                    "程序会尝试使用备用定位策略,但建议检查日志了解详情。"
+                )
+        except Exception as e:
+            self.logger.error(f"页面验证失败: {e}", exc_info=True)
+            CustomMessageBox.show_error(
+                self,
+                "验证出错",
+                f"页面验证过程中发生错误:\n{str(e)}"
+            )
     
     def close_browser(self):
         """关闭浏览器"""
@@ -827,7 +1021,7 @@ class MainWindow(QMainWindow):
     def show_usage(self):
         """显示使用说明"""
         usage_text = """
-        <h2>引物设计套件使用说明</h2>
+        <h2>引物设计工具使用说明</h2>
         
         <h3>1. 输入坐标</h3>
         <p>在"批量基因组坐标输入"区域输入染色体坐标，每行一组。<br>
