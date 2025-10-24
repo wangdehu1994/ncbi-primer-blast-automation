@@ -65,9 +65,6 @@ Source: "dist\PrimerDesignBlast\*"; DestDir: "{app}"; Flags: ignoreversion recur
 ; README 文档
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
-; 使用说明
-Source: "exe使用说明.md"; DestDir: "{app}"; Flags: ignoreversion
-
 [Icons]
 ; 开始菜单快捷方式
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
