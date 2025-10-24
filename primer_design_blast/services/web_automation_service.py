@@ -7,9 +7,7 @@ Web自动化服务
 import time
 import logging
 import threading
-import platform
 from typing import Optional, Tuple
-from contextlib import contextmanager
 
 try:
     from selenium import webdriver
@@ -264,108 +262,143 @@ class WebAutomationService:
         self.page_initialized = False
         self.current_browser = None
         
-        # 初始化驱动路径
+        # 初始化驱动路径（简化版，支持所有 Windows 版本）
         self._init_driver_paths()
         self._initialized = True
     
     def _init_driver_paths(self):
-        """初始化浏览器驱动路径"""
-        system = platform.system()
-        release = platform.release()
-        driver_dir = "resources/drivers/win10"
-        
-        if system == "Windows" and release == "7":
-            driver_dir = "resources/drivers/win7"
-        
+        """初始化浏览器驱动路径（跨 Windows 版本兼容）"""
         self.driver_paths = {
-            "Edge": get_resource_path(f"{driver_dir}/msedgedriver.exe"),
-            "Chrome": get_resource_path(f"{driver_dir}/chromedriver.exe"),
+            "Edge": get_resource_path("resources/drivers/msedgedriver.exe"),
+            "Chrome": get_resource_path("resources/drivers/chromedriver.exe"),
         }
         
         self.logger.info(f"驱动路径: {self.driver_paths}")
     
     def ensure_driver_alive(self) -> bool:
-        """检查驱动是否存活"""
+        """
+        检查驱动是否存活
+        
+        Returns:
+            驱动是否存活
+        """
         if not self.driver:
             return False
         
         try:
+            # 尝试获取当前URL来检测浏览器是否存活
             _ = self.driver.current_url
+            # 尝试执行一个简单的JavaScript来确认响应
+            self.driver.execute_script("return document.readyState")
             return True
-        except:
-            self.logger.warning("检测到浏览器已关闭")
+        except Exception as e:
+            self.logger.warning(f"检测到浏览器已关闭或无响应: {e}")
+            # 清理状态
             self.driver = None
+            self.page = None
             self.page_initialized = False
             return False
     
-    def setup_driver(self, browser: str = "Edge") -> bool:
+    def setup_driver(self, browser: str = "Edge", retry: int = 2) -> bool:
         """
-        设置浏览器驱动
+        设置浏览器驱动（带重试）
         
         Args:
             browser: 浏览器类型 (Edge/Chrome)
+            retry: 重试次数
             
         Returns:
             是否成功
         """
+        # 如果驱动已存在且存活，检查是否同一浏览器
         if self.driver and self.ensure_driver_alive():
             if self.current_browser == browser:
+                self.logger.info(f"{browser} 浏览器已就绪")
                 return True
             else:
+                self.logger.info(f"切换浏览器: {self.current_browser} -> {browser}")
                 self.close_driver()
         
-        try:
-            if browser == "Edge":
-                options = EdgeOptions()
-                service = EdgeService(executable_path=self.driver_paths["Edge"])
-            elif browser == "Chrome":
-                options = ChromeOptions()
-                service = ChromeService(executable_path=self.driver_paths["Chrome"])
-            else:
-                raise ValueError(f"不支持的浏览器: {browser}")
-            
-            # 通用选项
-            options.add_argument("--disable-blink-features=AutomationControlled")
-            options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            options.add_argument("--incognito")
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
-            options.add_argument("--log-level=3")
-            
-            # 创建驱动
-            if browser == "Edge":
-                self.driver = webdriver.Edge(service=service, options=options)
-            else:
-                self.driver = webdriver.Chrome(service=service, options=options)
-            
-            self.current_browser = browser
-            self.page = PrimerBlastPage(self.driver, self.config)
-            
-            self.logger.info(f"{browser} 浏览器驱动启动成功")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"{browser} 浏览器驱动启动失败: {e}")
-            return False
+        # 尝试启动浏览器
+        for attempt in range(retry):
+            try:
+                if attempt > 0:
+                    self.logger.info(f"第 {attempt + 1} 次尝试启动 {browser} 浏览器...")
+                    time.sleep(2)
+                
+                if browser == "Edge":
+                    options = EdgeOptions()
+                    service = EdgeService(executable_path=self.driver_paths["Edge"])
+                elif browser == "Chrome":
+                    options = ChromeOptions()
+                    service = ChromeService(executable_path=self.driver_paths["Chrome"])
+                else:
+                    raise ValueError(f"不支持的浏览器: {browser}")
+                
+                # 通用选项
+                options.add_argument("--disable-blink-features=AutomationControlled")
+                options.add_experimental_option("excludeSwitches", ["enable-automation"])
+                options.add_argument("--incognito")
+                options.add_argument("--no-sandbox")
+                options.add_argument("--disable-dev-shm-usage")
+                options.add_argument("--log-level=3")
+                
+                # 创建驱动
+                if browser == "Edge":
+                    self.driver = webdriver.Edge(service=service, options=options)
+                else:
+                    self.driver = webdriver.Chrome(service=service, options=options)
+                
+                self.current_browser = browser
+                self.page = PrimerBlastPage(self.driver, self.config)
+                
+                self.logger.info(f"{browser} 浏览器驱动启动成功")
+                return True
+                
+            except Exception as e:
+                self.logger.error(f"第 {attempt + 1} 次启动 {browser} 浏览器失败: {e}")
+                # 清理失败的驱动
+                try:
+                    if self.driver:
+                        self.driver.quit()
+                except:
+                    pass
+                self.driver = None
+                self.page = None
+        
+        self.logger.error(f"{browser} 浏览器驱动启动失败（已重试 {retry} 次）")
+        return False
     
     def close_driver(self):
-        """关闭浏览器驱动"""
+        """关闭浏览器驱动（安全关闭）"""
         if self.driver:
             try:
+                # 关闭所有标签页
+                try:
+                    for handle in self.driver.window_handles:
+                        self.driver.switch_to.window(handle)
+                        self.driver.close()
+                except:
+                    pass
+                
+                # 退出驱动
                 self.driver.quit()
-                self.logger.info("浏览器已关闭")
-            except:
-                pass
+                self.logger.info("浏览器已安全关闭")
+            except Exception as e:
+                self.logger.warning(f"关闭浏览器时出错: {e}")
             finally:
                 self.driver = None
                 self.page = None
                 self.page_initialized = False
                 self.current_browser = None
     
-    def open_primer_blast(self) -> bool:
+    def open_primer_blast(self, retry: int = 2) -> bool:
         """
-        打开Primer-BLAST网页
+        打开Primer-BLAST网页（带重试）
         
+        Args:
+            retry: 重试次数
+            
         Returns:
             是否成功打开
         """
@@ -373,29 +406,36 @@ class WebAutomationService:
             self.logger.error("浏览器驱动未启动")
             return False
         
-        try:
-            self.logger.info("正在打开 Primer-BLAST 网页...")
-            self.driver.get(self.config.PRIMER_BLAST_URL)
-            
-            # 等待页面加载
-            WebDriverWait(self.driver, self.config.PAGE_LOAD_TIMEOUT).until(
-                EC.url_contains("primer-blast")
-            )
-            
-            # 刷新data:URL
-            if "data:" in self.driver.current_url:
-                self.driver.refresh()
-            
-            WebDriverWait(self.driver, self.config.PAGE_LOAD_TIMEOUT).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
-            )
-            
-            self.logger.info("Primer-BLAST 网页已打开")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"打开网页失败: {e}")
-            return False
+        for attempt in range(retry):
+            try:
+                if attempt > 0:
+                    self.logger.info(f"第 {attempt + 1} 次尝试打开页面...")
+                    time.sleep(2)
+                
+                self.logger.info("正在打开 Primer-BLAST 网页...")
+                self.driver.get(self.config.PRIMER_BLAST_URL)
+                
+                # 等待页面加载
+                WebDriverWait(self.driver, self.config.PAGE_LOAD_TIMEOUT).until(
+                    EC.url_contains("primer-blast")
+                )
+                
+                # 刷新data:URL
+                if "data:" in self.driver.current_url:
+                    self.driver.refresh()
+                
+                WebDriverWait(self.driver, self.config.PAGE_LOAD_TIMEOUT).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
+                )
+                
+                self.logger.info("Primer-BLAST 网页已打开")
+                return True
+                
+            except Exception as e:
+                self.logger.error(f"第 {attempt + 1} 次打开网页失败: {e}")
+        
+        self.logger.error(f"打开网页失败（已重试 {retry} 次）")
+        return False
     
     def initialize_page(self, params: PrimerParams) -> Tuple[bool, Optional[str]]:
         """

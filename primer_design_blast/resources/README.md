@@ -1,46 +1,89 @@
-# 资源文件说明
+# 资源文件说明# 资源文件说明
 
-本目录包含引物设计工具运行所需的资源文件。
 
-## 目录结构
 
-```
-resources/
-├── drivers/              # 浏览器驱动文件
-│   ├── win10/           # Windows 10 驱动
-│   │   ├── msedgedriver.exe
-│   │   └── chromedriver.exe
-│   └── win7/            # Windows 7 驱动
-│       ├── msedgedriver.exe
+本目录包含引物设计工具运行所需的资源文件。本目录包含引物设计工具运行所需的资源文件。
+
+
+
+## 目录结构## 目录结构
+
+
+
+``````
+
+resources/resources/
+
+├── drivers/              # 浏览器驱动文件├── drivers/              # 浏览器驱动文件
+
+│   ├── msedgedriver.exe│   ├── win10/           # Windows 10 驱动
+
+│   └── chromedriver.exe│   │   ├── msedgedriver.exe
+
+└── hg19ToHg38/          # 基因组坐标转换文件│   │   └── chromedriver.exe
+
+    └── hg19ToHg38.over.chain│   └── win7/            # Windows 7 驱动
+
+```│       ├── msedgedriver.exe
+
 │       └── chromedriver.exe
-├── hg19ToHg38/          # 基因组坐标转换
+
+## 文件说明├── hg19ToHg38/          # 基因组坐标转换
+
 │   └── hg19ToHg38.over.chain
-└── icon.ico             # 应用程序图标
+
+### 浏览器驱动 (drivers/)└── icon.ico             # 应用程序图标
+
 ```
-
-## 文件说明
-
-### 浏览器驱动 (drivers/)
 
 用于 Selenium 自动化控制浏览器访问 NCBI Primer-BLAST 网站。
 
-- **msedgedriver.exe**: Microsoft Edge 浏览器驱动
-- **chromedriver.exe**: Google Chrome 浏览器驱动
+## 文件说明
 
-根据系统版本自动选择：
-- Windows 10 及以上：使用 `drivers/win10/`
-- Windows 7：使用 `drivers/win7/`
+- **msedgedriver.exe**: Microsoft Edge 浏览器驱动
+
+- **chromedriver.exe**: Google Chrome 浏览器驱动### 浏览器驱动 (drivers/)
+
+
+
+**更新方法**：用于 Selenium 自动化控制浏览器访问 NCBI Primer-BLAST 网站。
+
+- 在程序菜单栏：工具 → 更新浏览器驱动
+
+- 程序会自动下载与浏览器版本匹配的驱动- **msedgedriver.exe**: Microsoft Edge 浏览器驱动
+
+- **chromedriver.exe**: Google Chrome 浏览器驱动
 
 ### 坐标转换文件 (hg19ToHg38/)
 
-- **hg19ToHg38.over.chain**: UCSC LiftOver 链文件
-  - 用途：将 hg19 基因组坐标转换为 hg38
+根据系统版本自动选择：
+
+- **hg19ToHg38.over.chain**: UCSC LiftOver 链文件- Windows 10 及以上：使用 `drivers/win10/`
+
+  - 用途：将 hg19 基因组坐标转换为 hg38- Windows 7：使用 `drivers/win7/`
+
   - 来源：UCSC Genome Browser
-  - 格式：Chain 格式
 
-### 应用图标 (icon.ico)
+### 坐标转换文件 (hg19ToHg38/)
 
-应用程序窗口和任务栏显示的图标文件。
+**下载方法**：
+
+- 在程序菜单栏：工具 → 下载坐标转换文件- **hg19ToHg38.over.chain**: UCSC LiftOver 链文件
+
+- 程序会自动下载并保存到正确位置  - 用途：将 hg19 基因组坐标转换为 hg38
+
+  - 来源：UCSC Genome Browser
+
+## 注意事项  - 格式：Chain 格式
+
+
+
+1. 如果使用 hg38 坐标，无需下载转换文件### 应用图标 (icon.ico)
+
+2. 驱动版本需要与浏览器版本匹配，建议使用程序自动更新功能
+
+3. 不要手动修改目录结构应用程序窗口和任务栏显示的图标文件。
+
 
 ## 更新说明
 

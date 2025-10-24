@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-引物设计套件 (Primer Design Suite)
+引物设计工具 (Primer Design Tool)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 一个专业的NCBI Primer-BLAST自动化工具

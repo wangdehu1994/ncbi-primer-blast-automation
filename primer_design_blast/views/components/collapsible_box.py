@@ -8,9 +8,6 @@ from PyQt5.QtWidgets import (
     QSizePolicy, QLabel
 )
 from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, pyqtSignal
-from PyQt5.QtGui import QIcon
-from ...utils.resource_utils import get_resource_path
-import os
 
 
 class CollapsibleBox(QWidget):

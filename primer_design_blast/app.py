@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-引物设计套件 - 主程序入口
-Primer Design Suite v3.0
+引物设计工具 - 主程序入口
+Primer Design Tool v3.0
 
 一个专业的NCBI Primer-BLAST自动化工具
 """
@@ -25,7 +25,7 @@ def main():
     # 设置日志
     logger = setup_logger("primer_design_blast", logging.INFO)
     logger.info("=" * 60)
-    logger.info("引物设计套件启动")
+    logger.info("引物设计工具启动")
     logger.info("=" * 60)
     
     # 设置高DPI支持

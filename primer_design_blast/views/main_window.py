@@ -28,7 +28,7 @@ from ..utils.resource_utils import get_resource_path
 from .components.message_box import CustomMessageBox
 from .components.template_dialog import TemplateDialog
 from .components.driver_update_dialog import DriverUpdateDialog
-from .components.parameter_dialog import ParameterDialog
+from .components.chain_file_download_dialog import ChainFileDownloadDialog
 from .components.parameter_dialog import ParameterDialog
 
 
@@ -161,6 +161,12 @@ class MainWindow(QMainWindow):
         driver_update_action.triggered.connect(self.update_driver)
         tools_menu.addAction(driver_update_action)
 
+        chain_file_download_action = QAction("下载坐标转换文件...", self)
+        chain_file_download_action.triggered.connect(self.download_chain_file)
+        tools_menu.addAction(chain_file_download_action)
+
+        tools_menu.addSeparator()
+
         close_browser_action = QAction("关闭浏览器", self)
         close_browser_action.triggered.connect(self.close_browser)
         tools_menu.addAction(close_browser_action)
@@ -250,13 +256,13 @@ class MainWindow(QMainWindow):
         self.param_button.clicked.connect(self.open_parameter_dialog)
         self.param_button.setMinimumHeight(36)
 
-        self.start_button = QPushButton("开始处理")
-        self.start_button.setIcon(QIcon(get_resource_path("play.svg")))
+        self.start_button = QPushButton("▶ 开始处理")
+        # 移除SVG图标引用，使用文本符号代替
         self.start_button.setObjectName("startButton")
         self.start_button.setMinimumHeight(36)
 
-        self.stop_button = QPushButton("停止处理")
-        self.stop_button.setIcon(QIcon(get_resource_path("stop.svg")))
+        self.stop_button = QPushButton("⏹ 停止处理")
+        # 移除SVG图标引用，使用文本符号代替
         self.stop_button.setObjectName("stopButton")
         self.stop_button.setMinimumHeight(36)
         self.stop_button.setEnabled(False)
@@ -271,7 +277,7 @@ class MainWindow(QMainWindow):
     
     def create_progress_area(self) -> QGroupBox:
         """创建进度显示区域"""
-        group = QGroupBox("3. 运行日志")
+        group = QGroupBox("2. 运行日志")
 
         layout = QVBoxLayout()
         layout.setSpacing(10)
@@ -406,7 +412,7 @@ class MainWindow(QMainWindow):
                 border-bottom-right-radius: 4px;
             }}
             QComboBox::down-arrow {{
-                image: url({get_resource_path('chevron-down.svg').replace(os.sep, '/')});
+                /* 移除SVG图标引用，使用系统默认箭头 */
                 width: 14px;
                 height: 14px;
             }}
@@ -551,34 +557,85 @@ class MainWindow(QMainWindow):
     
     @pyqtSlot()
     def start_processing(self):
-        """开始处理"""
-        input_text = self.input_text.toPlainText().strip()
-        if not input_text:
-            CustomMessageBox.show_warning(
-                self,
-                "输入为空",
-                "请先输入染色体坐标信息"
+        """开始处理（增强版）"""
+        try:
+            # 检查输入
+            input_text = self.input_text.toPlainText().strip()
+            if not input_text:
+                CustomMessageBox.show_warning(
+                    self,
+                    "输入为空",
+                    "请先输入染色体坐标信息"
+                )
+                return
+            
+            # 检查任务状态
+            if not self.controller.can_start_new_task():
+                CustomMessageBox.show_warning(
+                    self,
+                    "任务冲突",
+                    f"当前任务状态为 {self.controller.task_state.value}，\n"
+                    f"请等待当前任务完成后再开始新任务。"
+                )
+                return
+            
+            # 获取参数
+            params = self.get_current_params()
+            if not params:
+                return
+            
+            # 检查是否有前一个线程还在运行
+            if self.worker_thread and self.worker_thread.isRunning():
+                self.logger.warning("前一个工作线程仍在运行，等待其结束")
+                self.worker_thread.quit()
+                self.worker_thread.wait(2000)  # 等待最多2秒
+            
+            # 在后台线程中处理
+            self.worker_thread = WorkerThread(
+                self.controller,
+                input_text,
+                self.version_combo.currentText(),
+                self.browser_combo.currentText(),
+                params
             )
-            return
-        
-        params = self.get_current_params()
-        if not params:
-            return
-        
-        # 在后台线程中处理
-        self.worker_thread = WorkerThread(
-            self.controller,
-            input_text,
-            self.version_combo.currentText(),
-            self.browser_combo.currentText(),
-            params
-        )
-        self.worker_thread.start()
+            self.worker_thread.start()
+            
+        except Exception as e:
+            self.logger.error(f"启动任务时出错: {e}", exc_info=True)
+            CustomMessageBox.show_error(
+                self,
+                "启动失败",
+                f"启动任务时发生错误:\n{str(e)}"
+            )
     
     @pyqtSlot()
     def stop_processing(self):
-        """停止处理"""
-        self.controller.stop_processing()
+        """停止处理（增强版）"""
+        try:
+            # 确认停止
+            if self.controller.task_state.value in ['running', 'initializing']:
+                reply = CustomMessageBox.show_question(
+                    self,
+                    "确认停止",
+                    "确定要停止当前任务吗？\n当前正在处理的坐标会完成后停止。"
+                )
+                if reply != QMessageBox.Yes:
+                    return
+            
+            # 请求停止
+            self.controller.stop_processing()
+            self._add_progress_message("正在停止任务，请稍候...", "⏹")
+            
+            # 禁用停止按钮，防止重复点击
+            self.stop_button.setEnabled(False)
+            
+        except Exception as e:
+            self.logger.error(f"停止处理时出错: {e}", exc_info=True)
+            CustomMessageBox.show_error(
+                self,
+                "停止失败",
+                f"停止任务时发生错误:\n{str(e)}"
+            )
     
     @pyqtSlot(str)
     def on_progress_updated(self, message: str):
@@ -607,35 +664,76 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def on_task_started(self):
         """任务开始"""
-        self.start_button.setEnabled(False)
-        self.stop_button.setEnabled(True)
-        self.progress_bar.setValue(0)
-        self.progress_display.clear()
+        try:
+            self.start_button.setEnabled(False)
+            self.stop_button.setEnabled(True)
+            self.progress_bar.setValue(0)
+            self.progress_display.clear()
+            self._add_progress_message("任务已启动", "🚀")
+        except Exception as e:
+            self.logger.error(f"任务启动UI更新失败: {e}", exc_info=True)
     
     @pyqtSlot(ProcessingStats)
     def on_task_completed(self, stats: ProcessingStats):
         """任务完成"""
-        self.start_button.setEnabled(True)
-        self.stop_button.setEnabled(False)
-        
-        CustomMessageBox.show_success(
-            self,
-            "任务完成",
-            f"成功处理 {stats.success}/{stats.total} 组数据"
-        )
+        try:
+            self.start_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
+            
+            # 显示详细完成信息
+            success_rate = (stats.success / stats.total * 100) if stats.total > 0 else 0
+            CustomMessageBox.show_success(
+                self,
+                "任务完成",
+                f"处理完成!\n\n"
+                f"总计: {stats.total} 组\n"
+                f"成功: {stats.success} 组\n"
+                f"失败: {stats.failed} 组\n"
+                f"成功率: {success_rate:.1f}%"
+            )
+            self._add_progress_message(
+                f"任务完成 - 成功率 {success_rate:.1f}%", 
+                "✅"
+            )
+        except Exception as e:
+            self.logger.error(f"任务完成UI更新失败: {e}", exc_info=True)
     
     @pyqtSlot()
     def on_task_stopped(self):
         """任务停止"""
-        self.start_button.setEnabled(True)
-        self.stop_button.setEnabled(False)
-        self._add_progress_message("任务已被用户手动停止。", "🛑")
+        try:
+            self.start_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
+            
+            CustomMessageBox.show_info(
+                self,
+                "任务已停止",
+                "任务已被用户停止"
+            )
+            self._add_progress_message("任务已停止", "⏹")
+        except Exception as e:
+            self.logger.error(f"任务停止UI更新失败: {e}", exc_info=True)
     
     @pyqtSlot(str, str)
     def on_error_occurred(self, title: str, message: str):
-        """错误发生"""
-        CustomMessageBox.show_error(self, title, message)
-        self._add_progress_message(f"错误: {title} - {message}", "❌")
+        """错误发生（增强版）"""
+        try:
+            # 恢复UI状态
+            self.start_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
+            
+            # 显示错误信息
+            CustomMessageBox.show_error(self, title, message)
+            self._add_progress_message(f"错误: {title} - {message}", "❌")
+            
+            # 检查是否是浏览器相关错误
+            if "浏览器" in message or "driver" in message.lower():
+                self._add_progress_message(
+                    "提示: 可尝试更新浏览器驱动（工具 → 更新浏览器驱动）", 
+                    "💡"
+                )
+        except Exception as e:
+            self.logger.error(f"错误处理UI更新失败: {e}", exc_info=True)
     
 
     
@@ -754,6 +852,22 @@ class MainWindow(QMainWindow):
                 f"无法打开驱动更新对话框:\n{str(e)}"
             )
     
+    def download_chain_file(self):
+        """下载坐标转换文件"""
+        try:
+            # 获取目标目录
+            target_dir = get_resource_path("resources/hg19ToHg38")
+            
+            dialog = ChainFileDownloadDialog(target_dir, self)
+            dialog.exec_()
+        except Exception as e:
+            self.logger.error(f"打开坐标转换文件下载对话框失败: {e}", exc_info=True)
+            CustomMessageBox.show_error(
+                self,
+                "错误",
+                f"无法打开下载对话框:\n{str(e)}"
+            )
+    
     def validate_page_elements(self):
         """验证网页元素"""
         try:
@@ -805,8 +919,40 @@ class MainWindow(QMainWindow):
             )
     
     def close_browser(self):
-        """关闭浏览器"""
-        self.controller.close_browser()
+        """关闭浏览器（增强版）"""
+        try:
+            # 检查是否有任务正在运行
+            if self.controller.is_running:
+                reply = CustomMessageBox.show_question(
+                    self,
+                    "确认关闭",
+                    "任务正在运行中，关闭浏览器将终止当前任务。\n\n"
+                    "确定要关闭浏览器吗？"
+                )
+                if reply != QMessageBox.Yes:
+                    return
+                
+                # 先停止任务
+                self.controller.stop_processing()
+            
+            # 关闭浏览器
+            self.controller.close_browser()
+            self._add_progress_message("浏览器已关闭", "🌐")
+            
+            CustomMessageBox.show_info(
+                self,
+                "浏览器已关闭",
+                "浏览器已成功关闭。\n\n"
+                "下次开始任务时将自动重新启动浏览器。"
+            )
+            
+        except Exception as e:
+            self.logger.error(f"关闭浏览器时出错: {e}", exc_info=True)
+            CustomMessageBox.show_error(
+                self,
+                "关闭失败",
+                f"关闭浏览器时发生错误:\n{str(e)}"
+            )
     
     def show_usage(self):
         """显示使用说明"""
@@ -869,19 +1015,39 @@ class MainWindow(QMainWindow):
         msg.exec_()
     
     def closeEvent(self, event):
-        """关闭事件"""
-        if self.controller.is_running:
-            reply = CustomMessageBox.show_question(
-                self,
-                "确认退出",
-                "任务正在运行，确定要退出吗？"
-            )
-            if reply == QMessageBox.Yes:
+        """关闭事件（增强版）- 确保资源安全清理"""
+        try:
+            # 检查是否有任务正在运行
+            if self.controller.is_running:
+                reply = CustomMessageBox.show_question(
+                    self,
+                    "确认退出",
+                    "任务正在运行中，确定要退出吗？\n\n"
+                    "退出将停止当前任务并关闭浏览器。"
+                )
+                if reply != QMessageBox.Yes:
+                    event.ignore()
+                    return
+                
+                # 停止任务
                 self.controller.stop_processing()
+                
+                # 等待任务停止（最多等待3秒）
+                if self.worker_thread and self.worker_thread.isRunning():
+                    self.worker_thread.quit()
+                    self.worker_thread.wait(3000)  # 等待最多3秒
+            
+            # 关闭浏览器
+            try:
                 self.controller.close_browser()
-                event.accept()
-            else:
-                event.ignore()
-        else:
-            self.controller.close_browser()
+            except Exception as e:
+                self.logger.warning(f"关闭浏览器时出错: {e}")
+            
+            # 接受关闭事件
+            event.accept()
+            self.logger.info("程序正常退出")
+            
+        except Exception as e:
+            self.logger.error(f"关闭程序时出错: {e}", exc_info=True)
+            # 即使出错也允许关闭
             event.accept()

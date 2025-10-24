@@ -48,8 +48,17 @@ class CoordinateService:
         
         if HAS_LIFTOVER and chain_file:
             try:
-                self.liftover = LiftOver(chain_file)
-                self.logger.info(f"坐标转换器初始化成功: {chain_file}")
+                import os
+                if not os.path.exists(chain_file):
+                    self.logger.warning(
+                        f"坐标转换文件不存在: {chain_file}\n"
+                        "如需 hg19→hg38 坐标转换功能，请下载此文件。\n"
+                        "下载地址: https://hgdownload.cse.ucsc.edu/goldenpath/hg19/liftOver/hg19ToHg38.over.chain.gz\n"
+                        "详细说明请查看: resources/hg19ToHg38/README.md"
+                    )
+                else:
+                    self.liftover = LiftOver(chain_file)
+                    self.logger.info(f"坐标转换器初始化成功: {chain_file}")
             except Exception as e:
                 self.logger.error(f"无法加载坐标转换文件: {e}")
     
