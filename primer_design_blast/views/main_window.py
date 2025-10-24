@@ -236,7 +236,13 @@ class MainWindow(QMainWindow):
         if action == 'save':
             dialog.save_template()
         elif action == 'load':
-            dialog.load_template()
+            # 加载模板后直接应用,不再显示对话框
+            if dialog.load_template():
+                params = dialog.get_params()
+                if params:
+                    self.current_params = params
+                    self._add_progress_message(f"参数已更新", "⚙️")
+            return
             
         if dialog.exec_() == QDialog.Accepted:
             params = dialog.get_params()
@@ -829,7 +835,7 @@ class MainWindow(QMainWindow):
                 if selected_template:
                     params = self.template_manager.load_template(selected_template)
                     if params:
-                        self.set_params(params)
+                        self.current_params = params
                         self._add_progress_message(f"已加载模板: {selected_template}", "📋")
         except Exception as e:
             self.logger.error(f"打开模板管理对话框失败: {e}", exc_info=True)

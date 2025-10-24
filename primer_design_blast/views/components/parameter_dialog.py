@@ -256,7 +256,7 @@ class ParameterDialog(QDialog):
         names = self.template_manager.get_template_names()
         if not names:
             CustomMessageBox.show_info(self, "无模板", "还没有保存的模板")
-            return
+            return False
         
         name, ok = QInputDialog.getItem(
             self,
@@ -271,8 +271,10 @@ class ParameterDialog(QDialog):
             params = self.template_manager.load_template(name)
             if params:
                 self.set_params(params)
+                return True
             else:
                 CustomMessageBox.show_error(self, "加载失败", "无法加载模板")
+        return False
     
     def save_template(self):
         """保存模板"""
