@@ -70,3 +70,8 @@ prepare_files.bat
 version_info.txt
 setup_environment.bat
 icon.ico
+
+# PyInstaller 打包生成的文件
+dist/
+build/
+*.spec
