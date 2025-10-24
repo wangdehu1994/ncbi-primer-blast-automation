@@ -36,7 +36,7 @@ class ParameterDialog(QDialog):
         self.setMinimumWidth(600)
         
         # 设置图标
-        icon_path = get_resource_path("icon.ico")
+        icon_path = get_resource_path("resources/icon.ico")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
         

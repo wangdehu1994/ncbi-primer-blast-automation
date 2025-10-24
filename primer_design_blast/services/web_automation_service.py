@@ -72,6 +72,8 @@ class PrimerBlastPage:
         button = self.locator.find_element('advanced_button', wait_clickable=True)
         if button:
             button.click()
+            # 等待高级参数显示
+            time.sleep(1)
             self.logger.debug("已打开高级设置")
         else:
             raise Exception("无法定位到高级设置按钮")
@@ -121,44 +123,61 @@ class PrimerBlastPage:
     
     def set_primer_size(self, min_size: int, opt_size: int, max_size: int):
         """设置引物大小"""
-        self.driver.find_element(By.ID, self.selectors['primer_min_size']).clear()
-        self.driver.find_element(By.ID, self.selectors['primer_min_size']).send_keys(str(min_size))
-        self.driver.find_element(By.ID, self.selectors['primer_opt_size']).clear()
-        self.driver.find_element(By.ID, self.selectors['primer_opt_size']).send_keys(str(opt_size))
-        self.driver.find_element(By.ID, self.selectors['primer_max_size']).clear()
-        self.driver.find_element(By.ID, self.selectors['primer_max_size']).send_keys(str(max_size))
-        self.logger.debug(f"已设置引物大小: {min_size}/{opt_size}/{max_size}")
+        primer_min_elem = self.locator.find_element('primer_min_size')
+        primer_opt_elem = self.locator.find_element('primer_opt_size')
+        primer_max_elem = self.locator.find_element('primer_max_size')
+        
+        if all([primer_min_elem, primer_opt_elem, primer_max_elem]):
+            primer_min_elem.clear()
+            primer_min_elem.send_keys(str(min_size))
+            primer_opt_elem.clear()
+            primer_opt_elem.send_keys(str(opt_size))
+            primer_max_elem.clear()
+            primer_max_elem.send_keys(str(max_size))
+            self.logger.debug(f"已设置引物大小: {min_size}/{opt_size}/{max_size}")
+        else:
+            raise Exception("无法定位到引物大小输入框")
     
     def set_other_parameters(self, params: PrimerParams):
         """设置其他参数"""
         # 返回引物数量
-        self.driver.find_element(By.ID, self.selectors['primer_num_return']).clear()
-        self.driver.find_element(By.ID, self.selectors['primer_num_return']).send_keys(
-            str(params.primer_num_return)
-        )
+        primer_num_elem = self.locator.find_element('primer_num_return')
+        poly_x_elem = self.locator.find_element('poly_x')
+        end_gc_elem = self.locator.find_element('end_gc_max')
         
-        # 最大连续碱基
-        self.driver.find_element(By.ID, self.selectors['poly_x']).clear()
-        self.driver.find_element(By.ID, self.selectors['poly_x']).send_keys(str(params.max_poly_x))
-        
-        # 3'端最大GC
-        self.driver.find_element(By.ID, self.selectors['end_gc_max']).clear()
-        self.driver.find_element(By.ID, self.selectors['end_gc_max']).send_keys(
-            str(params.end_gc_max)
-        )
-        self.logger.debug("已设置其他参数")
+        if all([primer_num_elem, poly_x_elem, end_gc_elem]):
+            primer_num_elem.clear()
+            primer_num_elem.send_keys(str(params.primer_num_return))
+            
+            poly_x_elem.clear()
+            poly_x_elem.send_keys(str(params.max_poly_x))
+            
+            end_gc_elem.clear()
+            end_gc_elem.send_keys(str(params.end_gc_max))
+            
+            self.logger.debug(f"已设置其他参数: 返回数量={params.primer_num_return}, 最大连续={params.max_poly_x}, 3'端GC={params.end_gc_max}")
+        else:
+            raise Exception("无法定位到其他参数输入框")
     
     def set_database_and_organism(self):
         """设置数据库和物种"""
         # 设置数据库
-        db_dropdown = Select(self.driver.find_element(By.ID, self.selectors['database']))
-        db_dropdown.select_by_value("PRIMERDB/genome_selected_species")
+        db_elem = self.locator.find_element('database')
+        if db_elem:
+            db_dropdown = Select(db_elem)
+            db_dropdown.select_by_value("PRIMERDB/genome_selected_species")
+            self.logger.debug("已设置数据库")
+        else:
+            self.logger.warning("无法定位到数据库下拉框")
         
         # 设置物种
-        organism_box = self.driver.find_element(By.ID, self.selectors['organism'])
-        organism_box.clear()
-        organism_box.send_keys("Homo sapiens")
-        self.logger.debug("已设置数据库和物种")
+        organism_elem = self.locator.find_element('organism')
+        if organism_elem:
+            organism_elem.clear()
+            organism_elem.send_keys("Homo sapiens")
+            self.logger.debug("已设置物种: Homo sapiens")
+        else:
+            self.logger.warning("无法定位到物种输入框")
     
     def set_snp_and_window_options(self):
         """设置SNP和新窗口选项"""
@@ -268,9 +287,11 @@ class WebAutomationService:
     
     def _init_driver_paths(self):
         """初始化浏览器驱动路径（跨 Windows 版本兼容）"""
+        from ..utils.resource_utils import get_driver_path
+        
         self.driver_paths = {
-            "Edge": get_resource_path("resources/drivers/msedgedriver.exe"),
-            "Chrome": get_resource_path("resources/drivers/chromedriver.exe"),
+            "Edge": get_driver_path("msedgedriver.exe"),
+            "Chrome": get_driver_path("chromedriver.exe"),
         }
         
         self.logger.info(f"驱动路径: {self.driver_paths}")
@@ -440,6 +461,7 @@ class WebAutomationService:
     def initialize_page(self, params: PrimerParams) -> Tuple[bool, Optional[str]]:
         """
         初始化Primer-BLAST页面（只执行一次）
+        主要负责页面跳转和一次性设置
         
         Args:
             params: 引物参数
@@ -470,15 +492,43 @@ class WebAutomationService:
                     EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
                 )
             
-            self.logger.info("正在配置 Primer-BLAST 参数...")
-            
-            # 切换到单目标模式
+            # 切换到单目标模式（只需要做一次）
             self.page.click_one_target_tab()
             
-            # 打开高级设置
+            # 打开高级设置（只需要做一次）
             self.page.click_advanced_button()
             
-            # 设置所有固定参数
+            # 设置数据库和物种（只需要做一次）
+            self.page.set_database_and_organism()
+            self.page.set_snp_and_window_options()
+            
+            self.page_initialized = True
+            self.logger.info("Primer-BLAST 页面初始化完成")
+            return True, None
+            
+        except Exception as e:
+            error_msg = f"页面初始化失败: {str(e)}"
+            self.logger.error(error_msg)
+            return False, error_msg
+    
+    def update_parameters(self, params: PrimerParams) -> Tuple[bool, Optional[str]]:
+        """
+        更新引物参数（每次提交前都会调用）
+        这样可以确保用户修改参数后能生效
+        
+        Args:
+            params: 引物参数
+            
+        Returns:
+            (success, error_message)
+        """
+        if not self.driver:
+            return False, "浏览器驱动未启动"
+        
+        try:
+            self.logger.info("正在更新 Primer-BLAST 参数...")
+            
+            # 设置所有可变参数
             self.page.set_pcr_product_size(params.pcr_min, params.pcr_max)
             self.page.set_tm_values(
                 params.tm_min, 
@@ -492,15 +542,12 @@ class WebAutomationService:
                 params.primer_max_size
             )
             self.page.set_other_parameters(params)
-            self.page.set_database_and_organism()
-            self.page.set_snp_and_window_options()
             
-            self.page_initialized = True
-            self.logger.info("Primer-BLAST 页面初始化完成")
+            self.logger.info("参数更新完成")
             return True, None
             
         except Exception as e:
-            error_msg = f"页面初始化失败: {str(e)}"
+            error_msg = f"参数更新失败: {str(e)}"
             self.logger.error(error_msg)
             return False, error_msg
     
@@ -526,11 +573,16 @@ class WebAutomationService:
         if not self.ensure_driver_alive():
             return False, "浏览器已关闭，请重新启动"
         
-        # 首次需要初始化页面
+        # 首次需要初始化页面（只做一次）
         if not self.page_initialized:
             success, error = self.initialize_page(params)
             if not success:
                 return False, error
+        
+        # 每次提交前都更新参数（确保用户修改的参数生效）
+        success, error = self.update_parameters(params)
+        if not success:
+            return False, error
         
         for attempt in range(max_retries):
             try:

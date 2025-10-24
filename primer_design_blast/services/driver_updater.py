@@ -320,8 +320,8 @@ class DriverUpdater:
         if not url:
             return False, f"未找到匹配版本 {version} 的驱动"
         
-        # 统一保存目录（支持所有 Windows 版本）
-        save_path = get_resource_path("resources/drivers")
+        # 使用可写路径（支持所有 Windows 版本，安装包模式下使用用户数据目录）
+        save_path = get_resource_path("resources/drivers", writable=True)
         
         # 下载驱动
         success = self.download_driver(url, save_path, progress_callback)
@@ -351,8 +351,8 @@ class DriverUpdater:
         if not url:
             return False, f"未找到匹配版本 {version} 的驱动"
         
-        # 统一保存目录（支持所有 Windows 版本）
-        save_path = get_resource_path("resources/drivers")
+        # 使用可写路径（支持所有 Windows 版本，安装包模式下使用用户数据目录）
+        save_path = get_resource_path("resources/drivers", writable=True)
         
         # 下载驱动
         success = self.download_driver(url, save_path, progress_callback)

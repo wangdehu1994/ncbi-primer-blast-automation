@@ -25,8 +25,8 @@ a = Analysis(
     
     # 数据文件（资源文件）
     datas=[
-        # 包含整个 resources 目录
-        ('primer_design_blast/resources', 'primer_design_blast/resources'),
+        # 包含整个 resources 目录（打包到根目录下的 resources）
+        ('primer_design_blast/resources', 'resources'),
         # 包含 README 文档
         ('README.md', '.'),
         # 如果有其他资源文件，在此添加
@@ -123,14 +123,12 @@ pyz = PYZ(
     cipher=block_cipher
 )
 
-# 可执行文件配置
+# 可执行文件配置（onedir模式，适合Inno Setup安装包）
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
     [],
+    exclude_binaries=True,
     
     # 程序名称
     name='引物设计工具',
@@ -144,11 +142,8 @@ exe = EXE(
     # 是否去除符号表
     strip=False,
     
-    # 是否使用 UPX 压缩（需要安装 UPX）
+    # 是否使用 UPX 压缩
     upx=True,
-    
-    # UPX 排除列表
-    upx_exclude=[],
     
     # 运行时临时目录
     runtime_tmpdir=None,
@@ -175,28 +170,7 @@ exe = EXE(
     icon='primer_design_blast/resources/icon.ico',
 )
 
-# 如果使用 --onedir 模式，取消注释下面的 COLLECT 部分
-# 并注释掉上面 EXE 中的 a.binaries, a.zipfiles, a.datas
-"""
-exe = EXE(
-    pyz,
-    a.scripts,
-    [],
-    exclude_binaries=True,
-    name='引物设计工具',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    # icon='primer_design_blast/resources/icon.ico',
-)
-
+# 收集所有文件到一个文件夹（onedir模式）
 coll = COLLECT(
     exe,
     a.binaries,
@@ -205,6 +179,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='引物设计工具'
+    name='PrimerDesignBlast'
 )
-"""

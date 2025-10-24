@@ -4,6 +4,7 @@
 处理核心业务逻辑,协调服务层和视图层
 """
 
+import os
 import logging
 import time
 import threading
@@ -108,12 +109,30 @@ class PrimerController(QObject):
         
         Args:
             chain_file: chain文件路径,如果为None则自动查找
+            
+        Raises:
+            RuntimeError: 如果坐标转换器初始化失败
         """
         if chain_file is None:
             chain_file = get_resource_path("resources/hg19ToHg38/hg19ToHg38.over.chain")
         
         self.coord_service = CoordinateService(chain_file)
-        self.logger.info("坐标转换服务已初始化")
+        
+        # 检查坐标转换器是否真的初始化成功
+        if self.coord_service.liftover is None:
+            error_msg = (
+                f"坐标转换器初始化失败!\n"
+                f"链文件路径: {chain_file}\n"
+                f"文件存在: {os.path.exists(chain_file)}\n"
+                f"请检查:\n"
+                f"1. chain 文件是否损坏\n"
+                f"2. pyliftover 模块是否正确安装\n"
+                f"3. 查看日志获取详细错误信息"
+            )
+            self.logger.error(error_msg)
+            raise RuntimeError(error_msg)
+        
+        self.logger.info(f"坐标转换服务已初始化: {chain_file}")
     
     def validate_input(
         self, 
@@ -170,7 +189,17 @@ class PrimerController(QObject):
         try:
             # 初始化服务
             if not self.coord_service:
-                self.initialize_coordinate_service()
+                try:
+                    self.initialize_coordinate_service()
+                except RuntimeError as e:
+                    self.logger.error(f"坐标转换服务初始化失败: {e}")
+                    self.error_occurred.emit(
+                        "初始化失败",
+                        f"坐标转换服务初始化失败:\n{str(e)}\n\n"
+                        f"如果不需要坐标转换功能，请选择 hg38/GRCh38 基因组版本。"
+                    )
+                    self.task_state = TaskState.ERROR
+                    return
             
             # 预验证坐标
             if not skip_validation:
@@ -417,6 +446,20 @@ class PrimerController(QObject):
             # 坐标转换
             if genome_version == "hg19/GRCh37":
                 self.progress_updated.emit("正在转换 hg19 → hg38...")
+                
+                # 检查坐标服务是否可用
+                if not self.coord_service:
+                    error_msg = "坐标转换服务未初始化(coord_service为None)"
+                    self.logger.error(error_msg)
+                    self.progress_updated.emit(f"坐标转换失败: {error_msg}")
+                    return False
+                
+                if not self.coord_service.liftover:
+                    error_msg = "坐标转换器未初始化(liftover为None)"
+                    self.logger.error(error_msg)
+                    self.progress_updated.emit(f"坐标转换失败: {error_msg}")
+                    return False
+                
                 chrom, pos, error = self.coord_service.convert_hg19_to_hg38(chrom, pos)
                 
                 if error:
